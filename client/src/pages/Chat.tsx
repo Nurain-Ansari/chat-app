@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
+import socket from "../socket"; // import socket
 
 export interface Message {
   _id?: string;
@@ -14,7 +15,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
 
-  // Fetch message history
+  // Fetch old messages
   useEffect(() => {
     if (!senderId || !receiverId) return;
 
@@ -33,6 +34,36 @@ export default function Chat() {
     fetchMessages();
   }, [receiverId, senderId]);
 
+  // Socket connection setup
+  useEffect(() => {
+    console.log("Socket connection status:", socket.connected);
+
+    socket.on("connect", () => {
+      console.log("Connected to socket server with ID:", socket.id);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from socket server");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Connection error:", err);
+    });
+    socket.on("receive-message", (data: Message) => {
+      // Only append message if it's for this chat
+      if (
+        (data.sender === receiverId && data.receiver === senderId) ||
+        (data.sender === senderId && data.receiver === receiverId)
+      ) {
+        setMessages((prev) => [...prev, data]);
+      }
+    });
+
+    return () => {
+      socket.off("receive-message");
+    };
+  }, [receiverId, senderId]);
+
   const sendMessage = async () => {
     const msg: Message = {
       sender: senderId as string,
@@ -48,8 +79,11 @@ export default function Chat() {
       });
 
       if (!res.ok) throw new Error("Message send failed");
+
       const savedMessage = await res.json();
+
       setMessages((prev) => [...prev, savedMessage]);
+      socket.emit("send-message", savedMessage); // emit through socket
       setText("");
     } catch (err) {
       console.error(err);
@@ -74,7 +108,7 @@ export default function Chat() {
             </div>
           ))}
         </div>
-        <div className="flex space-x-2">
+        <form onSubmit={(e) => e.preventDefault()} className="flex space-x-2">
           <input
             type="text"
             className="flex-1 p-2 border rounded"
@@ -86,10 +120,11 @@ export default function Chat() {
             className="bg-blue-500 text-white px-4 py-2 rounded"
             onClick={sendMessage}
             disabled={!text.trim()}
+            type="submit"
           >
             Send
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );

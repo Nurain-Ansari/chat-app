@@ -18,7 +18,14 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 const server = http.createServer(app);
-const io = new Server(server);
+
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:5173', // Your frontend URL
+    methods: ['GET', 'POST'],
+  },
+  path: '/api/socket.io',
+});
 
 app.get('/', (req, res) => {
   res.send('API is running ✅');
@@ -53,4 +60,4 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-export default app;
+export { app, server };
