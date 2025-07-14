@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 export interface User {
@@ -9,12 +10,16 @@ export interface User {
 }
 export default function Home() {
   const [users, setUsers] = useState<User[]>([]);
+  const [currUser, setCurrUser] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/users")
+    const id = localStorage.getItem("userId") || "";
+    fetch(`${import.meta.env.VITE_API_URL}/user`)
       .then((res) => res.json())
-      .then((data) => setUsers(data))
+      .then((data) => setUsers(data.filter((ele: any) => ele._id !== id)))
       .catch((error) => console.error("Error fetching users:", error));
+
+    setCurrUser(id);
   }, []);
   console.log(users);
 
@@ -25,10 +30,10 @@ export default function Home() {
         {users.map((user) => (
           <li key={user?._id}>
             <Link
-              to={`/chat/${user._id}`}
+              to={`/chat/${currUser}/${user._id}`}
               className="block p-4 bg-white rounded shadow hover:bg-blue-100 transition"
             >
-              {user.name}
+              {user.name || `Hello ${user._id}`}
             </Link>
           </li>
         ))}

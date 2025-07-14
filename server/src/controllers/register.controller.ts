@@ -5,9 +5,7 @@ export const handleRegister = async (req: Request, res: Response) => {
   try {
     const formData: RegisterType = req.body;
 
-    const barcodeId = `CS-EVENT-2025-${Math.floor(10000 + Math.random() * 90000)}`;
-
-    const saved = await Register.create({ ...formData, barcodeId });
+    const saved = await Register.create({ ...formData });
 
     res.status(201).json({
       success: true,

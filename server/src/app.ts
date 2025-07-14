@@ -18,15 +18,11 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: 'http://localhost:5173' },
-});
+const io = new Server(server);
 
 app.get('/', (req, res) => {
   res.send('API is running ✅');
 });
-app.use('/api/messages', messageRoutes);
-app.use('/api/users', userRoutes);
 
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
@@ -41,6 +37,8 @@ io.on('connection', (socket) => {
 });
 
 // Routes
+app.use('/api/messages', messageRoutes);
+app.use('/api/user', userRoutes);
 
 app.use('/api', registerRouter);
 app.use('/api', authRouter);

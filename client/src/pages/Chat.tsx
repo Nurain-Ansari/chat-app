@@ -10,25 +10,18 @@ export interface Message {
 }
 
 export default function Chat() {
-  const { userId } = useParams();
+  const { receiverId, senderId } = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [myId, setMyId] = useState("");
   const [text, setText] = useState("");
-
-  // Get your own ID (simulate login)
-  useEffect(() => {
-    const id = prompt("Enter your user ID");
-    if (id) setMyId(id);
-  }, []);
 
   // Fetch message history
   useEffect(() => {
-    if (!myId || !userId) return;
+    if (!senderId || !receiverId) return;
 
     const fetchMessages = async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/api/messages/${myId}/${userId}`
+          `${import.meta.env.VITE_API_URL}/messages/${senderId}/${receiverId}`
         );
         const data: Message[] = await res.json();
         setMessages(data);
@@ -38,17 +31,17 @@ export default function Chat() {
     };
 
     fetchMessages();
-  }, [userId, myId]);
+  }, [receiverId, senderId]);
 
   const sendMessage = async () => {
     const msg: Message = {
-      sender: myId,
-      receiver: userId as string,
+      sender: senderId as string,
+      receiver: receiverId as string,
       content: text,
     };
 
     try {
-      const res = await fetch("http://localhost:5000/api/messages", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(msg),
@@ -66,13 +59,15 @@ export default function Chat() {
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-xl mx-auto bg-white rounded shadow p-4 space-y-4">
-        <h2 className="text-xl font-semibold">Chat with {userId}</h2>
+        <h2 className="text-xl font-semibold">Chat with {receiverId}</h2>
         <div className="h-96 overflow-y-auto border p-2 rounded bg-gray-50">
           {messages.map((msg, i) => (
             <div
               key={i}
               className={`p-2 my-1 rounded ${
-                msg.sender === myId ? "bg-blue-100 text-right" : "bg-gray-200"
+                msg.sender === senderId
+                  ? "bg-blue-100 text-right"
+                  : "bg-gray-200"
               }`}
             >
               {msg.content}
