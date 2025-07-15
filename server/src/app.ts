@@ -31,8 +31,15 @@ app.get('/', (req, res) => {
   res.send('API is running ✅');
 });
 
+const onlineUsers = new Set();
+
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
+
+  socket.on('online', (userId) => {
+    onlineUsers.add(userId);
+    io.emit('receive-online', Array.from(onlineUsers));
+  });
 
   socket.on('send-message', (messageData) => {
     socket.broadcast.emit('receive-message', messageData);

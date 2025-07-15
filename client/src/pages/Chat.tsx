@@ -12,6 +12,7 @@ export interface Message {
 
 export default function Chat() {
   const { receiverId, senderId } = useParams();
+  const [onlineUsers, setOnlineUsers] = useState([""]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
 
@@ -26,6 +27,7 @@ export default function Chat() {
         );
         const data: Message[] = await res.json();
         setMessages(data);
+        socket.emit("online", senderId);
       } catch (err) {
         console.error("Failed to fetch messages:", err);
       }
@@ -37,6 +39,11 @@ export default function Chat() {
   // Socket connection setup
   useEffect(() => {
     console.log("Socket connection status:", socket.connected);
+
+    socket.on("receive-online", (userList) => {
+      // console.log("data: ", userList);
+      setOnlineUsers(userList);
+    });
 
     socket.on("connect", () => {
       console.log("Connected to socket server with ID:", socket.id);
@@ -50,6 +57,7 @@ export default function Chat() {
       console.error("Connection error:", err);
     });
     socket.on("receive-message", (data: Message) => {
+      console.log("k");
       // Only append message if it's for this chat
       if (
         (data.sender === receiverId && data.receiver === senderId) ||
@@ -90,10 +98,17 @@ export default function Chat() {
     }
   };
 
+  const isCurrUserOnline = receiverId && onlineUsers.includes(receiverId);
+
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-xl mx-auto bg-white rounded shadow p-4 space-y-4">
-        <h2 className="text-xl font-semibold">Chat with {receiverId}</h2>
+        <h2 className="text-xl font-semibold">
+          Chat with {receiverId}{" "}
+          <p className={isCurrUserOnline ? "text-green-500" : "bg-red-300"}>
+            {isCurrUserOnline ? "Online" : "Oflline"}
+          </p>
+        </h2>
         <div className="h-96 overflow-y-auto border p-2 rounded bg-gray-50">
           {messages.map((msg, i) => (
             <div
