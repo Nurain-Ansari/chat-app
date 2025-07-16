@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import authRouter from './routes/auth.route';
 import messageRoutes from './routes/message.route';
-import userRoutes from './routes/users.route';
+import userRoutes from './routes/user.routes';
 
 dotenv.config();
 
