@@ -37,7 +37,7 @@ io.on('connection', (socket) => {
 
   socket.on('online', (userId) => {
     onlineUsers.add(userId);
-    io.emit('receive-online', Array.from(onlineUsers));
+    io.emit('online', Array.from(onlineUsers));
   });
 
   socket.on('send-message', (messageData) => {

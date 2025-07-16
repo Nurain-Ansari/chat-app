@@ -37,9 +37,10 @@ const Register = () => {
       });
 
       const data = await res.json();
+      console.log("data: ", data);
 
       if (!res.ok) {
-        throw new Error(data.message || "Registration failed");
+        throw new Error(data.error || "Registration failed");
       }
 
       localStorage.setItem("userId", data._id);
@@ -60,7 +61,9 @@ const Register = () => {
       >
         <h2 className="text-2xl font-semibold mb-6 text-center">Register</h2>
 
-        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+        {error && (
+          <p className="text-red-600 text-sm mb-4 text-center">{error}</p>
+        )}
 
         <input
           type="text"
