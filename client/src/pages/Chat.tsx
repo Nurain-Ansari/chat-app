@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import socket from "../socket"; // import socket
+import { format, isToday, isYesterday, parseISO, isSameDay } from "date-fns";
 
 export interface Message {
   _id?: string;
@@ -9,10 +10,18 @@ export interface Message {
   content: string;
   timestamp?: string;
 }
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  profilePic: string;
+  __v: number;
+}
 
 export default function Chat() {
   const { receiverId, senderId } = useParams();
   const [onlineUsers, setOnlineUsers] = useState([""]);
+  const [currUser, setCurrUser] = useState<User>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
 
@@ -35,6 +44,18 @@ export default function Chat() {
 
     fetchMessages();
   }, [receiverId, senderId]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/user/${receiverId}`
+      );
+      const data = await res.json();
+      setCurrUser(data);
+    };
+
+    fetchUser();
+  }, [receiverId]);
 
   // Socket connection setup
   useEffect(() => {
@@ -97,31 +118,81 @@ export default function Chat() {
       console.error(err);
     }
   };
+  const formatDateHeader = (date: Date) => {
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, "dd MMMM yyyy"); // e.g., "23 July 2025"
+  };
+  let lastMessageDate: string | null = null;
 
   const isCurrUserOnline = receiverId && onlineUsers.includes(receiverId);
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-xl mx-auto bg-white rounded shadow p-4 space-y-4">
-        <h2 className="text-xl font-semibold">
-          Chat with {receiverId}{" "}
-          <p className={isCurrUserOnline ? "text-green-500" : "bg-red-300"}>
-            {isCurrUserOnline ? "Online" : "Oflline"}
-          </p>
+        <h2 className="text-xl font-semibold flex items-center">
+          Name: {currUser?.name}
+          <span
+            className={`relative ml-2 inline-block h-2 w-2 rounded-full ${
+              isCurrUserOnline
+                ? "bg-gradient-to-br from-green-400 to-green-600"
+                : "bg-gradient-to-br from-gray-500 to-red-600"
+            }`}
+            style={{
+              backgroundSize: "200% 200%",
+              animation: isCurrUserOnline
+                ? "pulse 2s ease-in-out infinite, scale 1.5s ease-in-out infinite"
+                : "pulse 2s ease-in-out infinite",
+            }}
+          ></span>
         </h2>
-        <div className="h-96 overflow-y-auto border p-2 rounded bg-gray-50">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`p-2 my-1 rounded ${
-                msg.sender === senderId
-                  ? "bg-blue-100 text-right"
-                  : "bg-gray-200"
-              }`}
-            >
-              {msg.content}
-            </div>
-          ))}
+        <div className="h-96 overflow-y-auto  border p-2 rounded bg-gray-50">
+          {messages.map((msg) => {
+            if (!msg.timestamp) return null; //  we don't have timestamp
+
+            const msgDate = parseISO(msg.timestamp);
+            const currentDateHeader = formatDateHeader(msgDate);
+
+            const shouldShowDateHeader =
+              !lastMessageDate ||
+              !isSameDay(parseISO(lastMessageDate), msgDate);
+
+            if (shouldShowDateHeader) {
+              lastMessageDate = msg.timestamp;
+            }
+
+            return (
+              <div key={msg._id} className="mb-2">
+                {shouldShowDateHeader && (
+                  <div className="sticky top-0 z-10 my-2 text-center text-sm font-medium text-gray-600 bg-gray-100 py-1">
+                    {currentDateHeader}
+                  </div>
+                )}
+
+                <div
+                  key={msg._id}
+                  className={`mb-2 flex ${
+                    msg.sender === senderId ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`p-2 rounded w-fit max-w-[80%] ${
+                      msg.sender === senderId
+                        ? "bg-blue-100 text-right"
+                        : "bg-gray-200 text-left"
+                    }`}
+                  >
+                    <div className="inline-block break-words">
+                      <div>{msg.content}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {format(msgDate, "hh:mm a")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
         <form onSubmit={(e) => e.preventDefault()} className="flex space-x-2">
           <input

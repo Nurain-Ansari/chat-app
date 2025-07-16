@@ -14,6 +14,15 @@ router.get('/', async (req, res) => {
   }
 });
 
+// get single user
+router.get('/:id', async (req, res) => {
+  try {
+    const users = await User.findById(req.params.id); // exclude password
+    res.json(users);
+  } catch (error: unknown) {
+    res.status(500).json({ error: `Failed to fetch user ${error}` });
+  }
+});
 // Create a new user
 router.post('/', async (req, res) => {
   const { name, email, profilePic } = req.body;
