@@ -4,7 +4,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
-import registerRouter from './routes/register.route';
 import authRouter from './routes/auth.route';
 import messageRoutes from './routes/message.route';
 import userRoutes from './routes/users.route';
@@ -53,8 +52,6 @@ io.on('connection', (socket) => {
 // Routes
 app.use('/api/messages', messageRoutes);
 app.use('/api/user', userRoutes);
-
-app.use('/api', registerRouter);
 app.use('/api', authRouter);
 
 // Error handler (must be last)
