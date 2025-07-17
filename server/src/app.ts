@@ -4,10 +4,9 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
-import registerRouter from './routes/register.route';
 import authRouter from './routes/auth.route';
 import messageRoutes from './routes/message.route';
-import userRoutes from './routes/users.route';
+import userRoutes from './routes/user.routes';
 
 dotenv.config();
 
@@ -38,7 +37,7 @@ io.on('connection', (socket) => {
 
   socket.on('online', (userId) => {
     onlineUsers.add(userId);
-    io.emit('receive-online', Array.from(onlineUsers));
+    io.emit('online', Array.from(onlineUsers));
   });
 
   socket.on('send-message', (messageData) => {
@@ -53,8 +52,6 @@ io.on('connection', (socket) => {
 // Routes
 app.use('/api/messages', messageRoutes);
 app.use('/api/user', userRoutes);
-
-app.use('/api', registerRouter);
 app.use('/api', authRouter);
 
 // Error handler (must be last)

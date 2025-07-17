@@ -1,24 +1,33 @@
 import { Request, Response } from 'express';
+import UserModel from '../models/User.model';
 
-export const checkAdminAccess = (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
+// for login
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.status(400).json({ error: 'Email and Password is required' });
+      return;
+    }
 
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    res.status(401).json({ success: false, message: 'Unauthorized' });
-    return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const findUserByEmail = (await UserModel.findOne({ email }))?.toObject() as Record<string, any>;
+
+    if (!findUserByEmail) {
+      res.status(401).json({ error: 'Account does not exist' });
+      return;
+    }
+
+    if (password !== findUserByEmail.password) {
+      res.status(401).json({ error: 'Email Or Password is incorrect' });
+      return;
+    }
+
+    delete findUserByEmail.password;
+
+    res.status(200).json(findUserByEmail);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
-
-  const base64Credentials = authHeader.split(' ')[1];
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
-  const [email, password] = credentials.split(':');
-
-  if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-    res.status(200).json({
-      success: true,
-      message: 'Admin verified successfully',
-    });
-    return;
-  }
-
-  res.status(403).json({ success: false, message: 'Forbidden' });
 };
