@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import authRouter from './routes/auth.route';
 import messageRoutes from './routes/message.route';
 import userRoutes from './routes/user.routes';
+import friendRoutes from './routes/friend.route';
 
 dotenv.config();
 
@@ -52,6 +53,7 @@ io.on('connection', (socket) => {
 // Routes
 app.use('/api/messages', messageRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/friend-lists', friendRoutes);
 app.use('/api', authRouter);
 
 // Error handler (must be last)
