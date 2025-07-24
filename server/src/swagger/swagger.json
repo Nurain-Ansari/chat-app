@@ -1,0 +1,113 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Manual API Docs",
+    "version": "1.0.0",
+    "description": "This is manually written Swagger JSON"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api"
+    }
+  ],
+  "paths": {
+    "/user": {
+      "get": {
+        "summary": "Get all users",
+        "tags": ["Users"],
+        "responses": {
+          "200": {
+            "description": "List of all users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schema/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages/{senderId}/{receiverId}": {
+      "get": {
+        "summary": "Get all messages",
+        "tags": ["Messages"],
+        "parameters": [
+          {
+            "name": "senderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the sender"
+          },
+          {
+            "name": "receiverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the receiver"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schema/Message"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schema": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "example": "user" },
+          "_id": { "type": "string", "example": "6874d8630d205e8d79fab02e" },
+          "name": { "type": "string", "example": "Naveed Shaikh" },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "naveed@example.com"
+          },
+          "profilePic": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://images.unsplash.com/photo-123.jpg"
+          },
+          "__v": { "type": "integer", "example": 0 }
+        },
+        "required": ["_id", "name", "email", "profilePic"]
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "sender": { "type": "string", "description": "Sender's user ID" },
+          "receiver": { "type": "string", "description": "Receiver's user ID" },
+          "content": { "type": "string", "example": "Hi there!" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["sender", "receiver", "content"]
+      }
+    }
+  }
+}

@@ -312,6 +312,7 @@ export default function Chat() {
           <button
             className="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!text.trim()}
+            title="Send message"
             type="submit"
           >
             <svg
