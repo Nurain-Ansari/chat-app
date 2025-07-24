@@ -11,6 +11,54 @@
     }
   ],
   "paths": {
+    "/login": {
+      "post": {
+        "summary": "Login user",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "strongpassword"
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" },
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
     "/user": {
       "get": {
         "summary": "Get all users",
@@ -23,7 +71,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schema/User"
+                    "$ref": "#/components/schemas/User"
                   }
                 }
               }
@@ -34,7 +82,7 @@
     },
     "/messages/{senderId}/{receiverId}": {
       "get": {
-        "summary": "Get all messages",
+        "summary": "Get all messages between sender and receiver",
         "tags": ["Messages"],
         "parameters": [
           {
@@ -64,7 +112,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schema/Message"
+                    "$ref": "#/components/schemas/Message"
                   }
                 }
               }
@@ -75,7 +123,7 @@
     }
   },
   "components": {
-    "schema": {
+    "schemas": {
       "User": {
         "type": "object",
         "properties": {
@@ -99,12 +147,28 @@
       "Message": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string" },
-          "sender": { "type": "string", "description": "Sender's user ID" },
-          "receiver": { "type": "string", "description": "Receiver's user ID" },
+          "_id": { "type": "string", "example": "507f1f77bcf86cd799439011" },
+          "sender": {
+            "type": "string",
+            "description": "Sender's user ID",
+            "example": "507f1f77bcf86cd799439012"
+          },
+          "receiver": {
+            "type": "string",
+            "description": "Receiver's user ID",
+            "example": "507f1f77bcf86cd799439013"
+          },
           "content": { "type": "string", "example": "Hi there!" },
-          "createdAt": { "type": "string", "format": "date-time" },
-          "updatedAt": { "type": "string", "format": "date-time" }
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-01-01T12:00:00Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-01-01T12:00:00Z"
+          }
         },
         "required": ["sender", "receiver", "content"]
       }

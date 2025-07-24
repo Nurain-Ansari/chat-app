@@ -1,5 +1,6 @@
 import http from 'http';
 import fs from 'fs';
+import path from 'path';
 import { Server } from 'socket.io';
 import express, { Request, Response, NextFunction } from 'express';
 import SwaggerUi from 'swagger-ui-express';
@@ -10,7 +11,6 @@ import authRouter from './routes/auth.route';
 import messageRoutes from './routes/message.route';
 import userRoutes from './routes/user.routes';
 import friendRoutes from './routes/friend.route';
-import path from 'path';
 
 dotenv.config();
 
@@ -58,13 +58,12 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/friend-lists', friendRoutes);
 app.use('/api', authRouter);
+
 const swaggerPath = path.resolve(__dirname, 'swagger', 'swagger.json');
-console.log(__dirname, 'swaggerPath');
-console.log(swaggerPath, 'swaggerPath');
 const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, 'utf8'));
 
 // Serve it
-app.use('/api-docs', SwaggerUi.serve, SwaggerUi.setup(swaggerDocument));
+app.use('/docs', SwaggerUi.serve, SwaggerUi.setup(swaggerDocument));
 
 // Error handler (must be last)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

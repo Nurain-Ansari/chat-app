@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import UserModel from '../models/User.model';
+import FriendListModel from '../models/FriendList.model';
 
 // Get all users
 export const getAllUsers = async (req: Request, res: Response) => {
@@ -10,6 +11,44 @@ export const getAllUsers = async (req: Request, res: Response) => {
     res.json(users);
   } catch (err: any) {
     res.status(500).json({ error: `Failed to fetch users: ${err.message}` });
+  }
+};
+
+// Get all open users (users not in any of the friend lists)
+export const getAllOpenUsers = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params; // Destructure the id from params
+    if (!id) {
+      res.status(400).json({
+        message: 'User ID is required',
+        success: false,
+      });
+      return;
+    }
+
+    // Get all users except current user and without passwords
+    let users = await UserModel.find({ _id: { $ne: id } }).select('-password');
+
+    const friendList = await FriendListModel.findOne({ user: id });
+    if (friendList) {
+      // Filter users who aren't in any of the friend lists
+      users = users.filter(
+        (user) =>
+          !friendList.friendsList.some((friendId) => friendId.equals(user._id)) &&
+          !friendList.waitingList.some((waitingId) => waitingId.equals(user._id)) &&
+          !friendList.ignoreList.some((ignoreId) => ignoreId.equals(user._id)),
+      );
+    }
+
+    res.status(200).json({
+      data: users,
+      success: true,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      error: `Failed to fetch users: ${err.message}`,
+      success: false,
+    });
   }
 };
 

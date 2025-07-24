@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import FriendListModel from '../models/FriendList.model';
+import UserModel from '../models/User.model';
+
 interface FriendListUpdatePayload {
   friendsList?: string[];
   waitingList?: string[];
@@ -8,22 +11,56 @@ interface FriendListUpdatePayload {
 // post call
 export const createFriendList = async (req: Request, res: Response) => {
   try {
-    const { userId, friendList } = req.body;
+    const { userId, friendId } = req.body;
 
-    if (!userId || !friendList) {
-      res.status(400).json({ error: 'userId and friendList are required.' });
+    // 1. Validate input
+    if (!userId || !friendId) {
+      res.status(400).json({ error: 'userId and friendId are required.' });
       return;
     }
 
-    const newFriendList = await FriendListModel.create({
-      user: userId,
-      friendsList: friendList,
-    });
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(friendId)) {
+      res.status(400).json({ error: 'Invalid userId or friendId format.' });
+    }
 
-    res.status(201).json({ success: true, data: newFriendList });
+    // 2. Check if user and friend exist (optional but recommended)
+    const [userExists, friendExists] = await Promise.all([
+      UserModel.exists({ _id: userId }),
+      UserModel.exists({ _id: friendId }),
+    ]);
+
+    if (!userExists || !friendExists) {
+      res.status(404).json({ error: 'User or friend not found.' });
+      return;
+    }
+
+    // 3. Find or create the friend list
+    const friendList = await FriendListModel.findOneAndUpdate(
+      { user: userId }, // Filter: Find by userId
+      {
+        $addToSet: { friendsList: friendId }, // Add friendId to array (no duplicates)
+      },
+      {
+        new: true, // Return the updated document
+        upsert: true, // Create if it doesn't exist
+        setDefaultsOnInsert: true, // Apply schema defaults on creation
+      },
+    );
+
+    // 4. Success response
+    res.status(201).json({
+      success: true,
+      data: friendList,
+      message:
+        friendList.friendsList.length === 1
+          ? 'New friend list created.'
+          : 'Friend added to existing list.',
+    });
   } catch (error) {
-    const err = error as Error; // safe cast
-    res.status(400).json({ error: `Friend list creation failed: ${err.message}` });
+    const err = error as Error;
+    res.status(500).json({
+      error: `Friend list update failed: ${err.message}`,
+    });
   }
 };
 
