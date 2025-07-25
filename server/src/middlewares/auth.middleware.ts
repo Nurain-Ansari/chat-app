@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User.model';
+import { AuthenticatedRequest } from '../types/interface';
 
 export const verifyAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -26,7 +27,7 @@ export const verifyAdmin = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-export const verifyUser = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -44,6 +45,8 @@ export const verifyUser = async (req: Request, res: Response, next: NextFunction
       res.status(403).json({ success: false, message: 'Unauthorized' });
       return;
     }
+
+    req.user = { id };
 
     next();
   } catch {

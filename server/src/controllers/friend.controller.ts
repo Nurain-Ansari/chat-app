@@ -1,15 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { FriendAuditLog } from '../models/FriendAuditLog.model';
 import { FriendList } from '../models/FriendList.model';
 import { FriendRequest } from '../models/FriendRequest.model';
 import { FriendRequestStatus, FriendAction } from '../types/enums';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-  };
-}
+import { AuthenticatedRequest } from '../types/interface';
 
 const updateFriendLists = async (userId1: string, userId2: string) => {
   const [result1, result2] = await Promise.all([
@@ -203,6 +198,7 @@ export const ignoreUser = async (req: AuthenticatedRequest, res: Response) => {
 export const getFriendList = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
+    console.log('userId: ', userId);
     if (!userId) {
       res.status(400).json({ error: 'User ID is required' });
       return;
