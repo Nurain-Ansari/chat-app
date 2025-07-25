@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import { Types } from 'mongoose';
 import UserModel from '../models/User.model';
-import FriendListModel from '../models/FriendList.model';
+import { FriendList } from '../models/FriendList.model';
 
 // Get all users
 export const getAllUsers = async (req: Request, res: Response) => {
@@ -17,36 +18,51 @@ export const getAllUsers = async (req: Request, res: Response) => {
 // Get all open users (users not in any of the friend lists)
 export const getAllOpenUsers = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params; // Destructure the id from params
-    if (!id) {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!id || !Types.ObjectId.isValid(id)) {
       res.status(400).json({
-        message: 'User ID is required',
+        message: 'Valid user ID is required',
         success: false,
       });
       return;
     }
 
-    // Get all users except current user and without passwords
-    let users = await UserModel.find({ _id: { $ne: id } }).select('-password');
+    const userId = new Types.ObjectId(id);
 
-    const friendList = await FriendListModel.findOne({ user: id });
-    if (friendList) {
-      // Filter users who aren't in any of the friend lists
-      users = users.filter(
-        (user) =>
-          !friendList.friendsList.some((friendId) => friendId.equals(user._id)) &&
-          !friendList.waitingList.some((waitingId) => waitingId.equals(user._id)) &&
-          !friendList.ignoreList.some((ignoreId) => ignoreId.equals(user._id)),
-      );
-    }
+    // Get friend list in a single query with projections
+    const friendList = await FriendList.findOne({ user: userId })
+      .select('friendsList blockedUsers ignoredUsers')
+      .lean();
+
+    // Prepare exclusion list
+    const excludedUsers = friendList
+      ? [
+          ...friendList.friendsList.map((f) => f.user),
+          ...friendList.blockedUsers.map((b) => b.user),
+          ...friendList.ignoredUsers.map((i) => i.user),
+        ]
+      : [];
+
+    // Get open users in a single optimized query
+    const users = await UserModel.find({
+      _id: {
+        $ne: userId,
+        $nin: excludedUsers,
+      },
+    })
+      .select('-password -__v')
+      .lean();
 
     res.status(200).json({
       data: users,
       success: true,
     });
   } catch (err: any) {
+    console.error('Failed to fetch open users:', err);
     res.status(500).json({
-      error: `Failed to fetch users: ${err.message}`,
+      error: 'Failed to fetch users',
       success: false,
     });
   }

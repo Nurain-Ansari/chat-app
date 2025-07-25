@@ -56,7 +56,7 @@ io.on('connection', (socket) => {
 // Routes
 app.use('/api/messages', messageRoutes);
 app.use('/api/user', userRoutes);
-app.use('/api/friend-lists', friendRoutes);
+app.use('/api/friend', friendRoutes);
 app.use('/api', authRouter);
 
 const swaggerPath = path.resolve(__dirname, 'swagger', 'swagger.json');
