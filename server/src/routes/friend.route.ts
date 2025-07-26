@@ -7,6 +7,7 @@ import {
   ignoreUser,
   getFriendList,
   getAuditLogs,
+  getFriendRequest,
 } from '../controllers/friend.controller';
 import { verifyUser } from '../middlewares/auth.middleware';
 
@@ -18,6 +19,7 @@ router.post('/block', verifyUser, blockUser);
 router.post('/unblock', verifyUser, unblockUser);
 router.post('/ignore', verifyUser, ignoreUser);
 
+router.get('/friend-requests', verifyUser, getFriendRequest);
 router.get('/friends', verifyUser, getFriendList);
 router.get('/audit-logs', verifyUser, getAuditLogs);
 

@@ -68,10 +68,42 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
   }
 };
 
+export const getFriendRequest = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const fromUser = req.user?.id;
+
+    // Get all friend requests where the current user is the recipient
+    const friendRequests = await FriendRequest.find({
+      to: fromUser,
+    }).lean();
+
+    // Group requests by status for better organization in the response
+    const groupedRequests = {
+      pending: friendRequests.filter((req) => req.status === FriendRequestStatus.PENDING),
+      accepted: friendRequests.filter((req) => req.status === FriendRequestStatus.ACCEPTED),
+      rejected: friendRequests.filter((req) => req.status === FriendRequestStatus.REJECTED),
+      cancelled: friendRequests.filter((req) => req.status === FriendRequestStatus.CANCELLED),
+    };
+
+    res.status(200).json({
+      success: true,
+      data: groupedRequests,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
 export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const toUser = req.user?.id;
-    const { fromUserId } = req.body;
+    const body = req.body;
+    const fromUserId = body?.fromUserId;
+
+    console.log('fromUserId: ', body);
 
     if (!toUser || !fromUserId) {
       res.status(400).json({ error: 'Missing required fields' });
@@ -235,7 +267,7 @@ export const getAuditLogs = async (req: AuthenticatedRequest, res: Response) => 
     const logs = await FriendAuditLog.find({
       $or: [{ actor: userId }, { target: userId }],
     })
-      .sort({ timestamp: -1 })
+      .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .populate('actor target', 'name profilePic')

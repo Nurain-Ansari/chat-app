@@ -39,7 +39,7 @@ export const verifyUser = async (req: AuthenticatedRequest, res: Response, next:
     const id = authHeader.split(' ')[1];
 
     // ✅ Find user by ID
-    const user = await User.findById(id);
+    const user = await User.findById(id).lean();
 
     if (!user) {
       res.status(403).json({ success: false, message: 'Unauthorized' });

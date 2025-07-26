@@ -11,6 +11,7 @@ import authRouter from './routes/auth.route';
 import messageRoutes from './routes/message.route';
 import userRoutes from './routes/user.routes';
 import friendRoutes from './routes/friend.route';
+import { requestLogger } from './middlewares/request-logger.middleware';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
 const server = http.createServer(app);
 
 const io = new Server(server, {

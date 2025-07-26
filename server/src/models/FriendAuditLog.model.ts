@@ -6,19 +6,22 @@ interface IFriendAuditLog {
   target: Types.ObjectId;
   action: FriendAction;
   reason?: string;
-  timestamp?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-const auditLogSchema = new Schema<IFriendAuditLog>({
-  actor: { type: Schema.Types.ObjectId, ref: 'User' },
-  target: { type: Schema.Types.ObjectId, ref: 'User' },
-  action: {
-    type: String,
-    enum: Object.values(FriendAction),
+const auditLogSchema = new Schema<IFriendAuditLog>(
+  {
+    actor: { type: Schema.Types.ObjectId, ref: 'User' },
+    target: { type: Schema.Types.ObjectId, ref: 'User' },
+    action: {
+      type: String,
+      enum: Object.values(FriendAction),
+    },
+    reason: String,
   },
-  reason: String,
-  timestamp: { type: Date, default: Date.now },
-});
+  { timestamps: true },
+);
 
 auditLogSchema.index({ actor: 1 });
 
