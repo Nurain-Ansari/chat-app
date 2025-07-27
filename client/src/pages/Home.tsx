@@ -14,6 +14,11 @@ export default function Home() {
 
   useEffect(() => {
     const id = localStorage.getItem("userId") || "";
+    console.log("id: ", id);
+    if (!id) {
+      window.location.href = "/login";
+      return;
+    }
     fetch(`${import.meta.env.VITE_API_URL}/user`)
       .then((res) => res.json())
       .then((data) => setUsers(data.filter((ele: any) => ele._id !== id)))
