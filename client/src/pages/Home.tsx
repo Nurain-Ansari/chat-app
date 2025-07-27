@@ -243,7 +243,7 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {users.map((user) => (
+        {users.map((user, i) => (
           <div
             key={user._id}
             className="relative bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition group"
@@ -252,7 +252,11 @@ export default function Home() {
               <div className="flex-shrink-0">
                 <img
                   className="h-12 w-12 rounded-full object-cover"
-                  src={user.profilePic || "https://via.placeholder.com/150"}
+                  src={
+                    user.profilePic
+                      ? `${user.profilePic}?random=${i}`
+                      : "https://via.placeholder.com/150"
+                  }
                   alt={user.name}
                 />
               </div>
