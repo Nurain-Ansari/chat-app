@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 type RegisterForm = {
@@ -13,12 +13,21 @@ const Register = () => {
     name: "",
     email: "",
     password: "",
-    profilePic: "",
+    profilePic: "https://lipsum.app/random/200x200",
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const id = localStorage.getItem("userId") || "";
+    console.log("id: ", id);
+    if (id !== "") {
+      window.location.href = "/";
+      return;
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -104,13 +113,19 @@ const Register = () => {
           onChange={handleChange}
         />
 
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-          disabled={loading}
-        >
-          {loading ? "Registering..." : "Register"}
-        </button>
+        <div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {loading ? "Registering..." : "Register"}
+          </button>
+
+          <a className="text-sm text-blue-600 hover:underline" href="/login">
+            Already have an account? Log in
+          </a>
+        </div>
       </form>
     </div>
   );

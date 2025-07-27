@@ -14,19 +14,17 @@ export default function Home() {
 
   useEffect(() => {
     const id = localStorage.getItem("userId") || "";
-    console.log("id: ", id);
     if (!id) {
       window.location.href = "/login";
       return;
     }
-    fetch(`${import.meta.env.VITE_API_URL}/user`)
+    fetch(`${import.meta.env.VITE_API_URL}/user/open/${id}`)
       .then((res) => res.json())
-      .then((data) => setUsers(data.filter((ele: any) => ele._id !== id)))
+      .then((data) => setUsers(data.data.filter((ele: any) => ele._id !== id)))
       .catch((error) => console.error("Error fetching users:", error));
 
     setCurrUser(id);
   }, []);
-  console.log(users);
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
