@@ -12,7 +12,7 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
       <Route path="/logout" element={<Logout />} />
-      <Route path="/chat/:senderId/:receiverId" element={<Chat />} />
+      <Route path="/chat" element={<Chat />} />
     </Routes>
   );
 }

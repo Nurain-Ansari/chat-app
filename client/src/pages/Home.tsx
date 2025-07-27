@@ -235,7 +235,7 @@ export default function Home() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Connect with People</h1>
         <Link
-          to="/friends"
+          to="/chat"
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
         >
           Go to Friends Page
