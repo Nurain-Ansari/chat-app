@@ -28,7 +28,7 @@ interface IFriendList {
 
 const friendListSchema = new Schema<IFriendList>(
   {
-    user: { type: Schema.Types.ObjectId, ref: 'User' },
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     friendsList: [
       {
         user: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -58,12 +58,5 @@ friendListSchema.index({ user: 1 });
 friendListSchema.index({ 'friendsList.user': 1 });
 friendListSchema.index({ 'blockedUsers.user': 1 });
 friendListSchema.index({ 'ignoredUsers.user': 1 });
-
-friendListSchema.index({
-  user: 1,
-  'friendsList.user': 1,
-  'blockedUsers.user': 1,
-  'ignoredUsers.user': 1,
-});
 
 export const FriendList = model<IFriendList>('FriendList', friendListSchema);

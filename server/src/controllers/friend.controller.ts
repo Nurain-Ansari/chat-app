@@ -8,7 +8,7 @@ import { AuthenticatedRequest } from '../types/interface';
 
 const updateFriendLists = async (userId1: string, userId2: string) => {
   const [result1, result2] = await Promise.all([
-    FriendList.updateOne(
+    FriendList.findOneAndUpdate(
       { user: userId1 },
       { $addToSet: { friendsList: { user: userId2 } } },
       { upsert: true },
@@ -25,7 +25,9 @@ const updateFriendLists = async (userId1: string, userId2: string) => {
 
 export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    // a
     const fromUser = req.user?.id;
+    // b
     const { toUserId } = req.body;
 
     if (!fromUser || !toUserId) {
@@ -99,11 +101,11 @@ export const getFriendRequest = async (req: AuthenticatedRequest, res: Response)
 
 export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    // to b
     const toUser = req.user?.id;
     const body = req.body;
+    // to a
     const fromUserId = body?.fromUserId;
-
-    console.log('fromUserId: ', body);
 
     if (!toUser || !fromUserId) {
       res.status(400).json({ error: 'Missing required fields' });
