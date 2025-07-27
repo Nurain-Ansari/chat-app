@@ -45,6 +45,7 @@ const FriendsList = ({
   error,
   setSearchParams,
   senderId,
+  setCurrUser,
 }: {
   friends: Friend[];
   onlineUsers: string[];
@@ -53,6 +54,7 @@ const FriendsList = ({
   error: string;
   setSearchParams: SetURLSearchParams;
   senderId: string | null;
+  setCurrUser: React.Dispatch<React.SetStateAction<User | null>>;
 }) => {
   const filteredFriends = friends.filter((friend) =>
     friend.user.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -93,6 +95,7 @@ const FriendsList = ({
                   senderId: senderId || "",
                   receiverId: friend.user._id,
                 });
+                setCurrUser(friend.user);
               }}
             >
               <div className="relative">
@@ -190,6 +193,7 @@ const ChatHeader = ({
   isCurrUserOnline: boolean;
   isTyping: boolean;
 }) => {
+  console.log(currUser);
   return (
     <div className="bg-white shadow-sm p-4 flex items-center justify-between">
       <div className="flex items-center space-x-3">
@@ -442,6 +446,7 @@ export default function Chat() {
 
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [currUser, setCurrUser] = useState<User | null>(null);
+  console.log("currUser: ", currUser);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -453,7 +458,7 @@ export default function Chat() {
   const [loading, setLoading] = useState({
     friends: true,
     messages: true,
-    user: true,
+    user: false,
     requests: true,
   });
   const [error, setError] = useState({
@@ -502,7 +507,7 @@ export default function Chat() {
     };
 
     fetchFriends();
-  }, []);
+  }, [id]);
 
   // Fetch friend requests (empty for now)
   useEffect(() => {
@@ -544,35 +549,38 @@ export default function Chat() {
 
   // Fetch user info
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        if (!receiverId) return;
+    // const fetchUser = async () => {
+    //   try {
+    //     if (!receiverId) return;
 
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/user/${receiverId}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${id}`,
-            },
-          }
-        );
-        const data = await res.json();
-        setCurrUser(data);
-      } catch {
-        setError((prev) => ({
-          ...prev,
-          user: "Failed to load user info",
-        }));
-      } finally {
-        setLoading((prev) => ({ ...prev, user: false }));
-      }
-    };
+    //     const res = await fetch(
+    //       `${import.meta.env.VITE_API_URL}/user/${receiverId}`,
+    //       {
+    //         method: "GET",
+    //         headers: {
+    //           "Content-Type": "application/json",
+    //           Authorization: `Bearer ${id}`,
+    //         },
+    //       }
+    //     );
+    //     const data = await res.json();
+    //     setCurrUser(data);
+    //   } catch {
+    //     setError((prev) => ({
+    //       ...prev,
+    //       user: "Failed to load user info",
+    //     }));
+    //   } finally {
+    //     setLoading((prev) => ({ ...prev, user: false }));
+    //   }
+    // };
+    // setLoading((prev) => ({ ...prev, user: true }));
 
-    setLoading((prev) => ({ ...prev, user: true }));
-    fetchUser();
-  }, [receiverId, id]);
+    const selectedFr = friends.find((ele) => ele.user._id === receiverId)?.user;
+
+    setCurrUser(selectedFr || null);
+    // fetchUser();
+  }, [setCurrUser, friends, receiverId]);
 
   // Socket connection setup
   useEffect(() => {
@@ -756,6 +764,7 @@ export default function Chat() {
               error={error.friends}
               setSearchParams={setSearchParams}
               senderId={senderId}
+              setCurrUser={setCurrUser}
             />
           ) : (
             <RequestsList
