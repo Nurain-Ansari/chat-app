@@ -46,13 +46,12 @@ const Register = () => {
       });
 
       const data = await res.json();
-      console.log("data: ", data);
 
       if (!res.ok) {
-        throw new Error(data.error || "Registration failed");
+        throw new Error(data.message || "Registration failed");
       }
 
-      localStorage.setItem("userId", data._id);
+      localStorage.setItem("userId", data.data._id);
       navigate("/");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {

@@ -1,33 +1,38 @@
-import { Request, Response } from 'express';
-import UserModel from '../models/User.model';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-// for login
+import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
+import UserModel from '../models/User.model';
+import { errorResponse, successResponse } from '../middlewares/response.middleware';
+
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+
+    // Validate input
     if (!email || !password) {
-      res.status(400).json({ error: 'Email and Password is required' });
-      return;
+      return errorResponse(res, 'Email and password are required', 400);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const findUserByEmail = (await UserModel.findOne({ email }))?.toObject() as Record<string, any>;
+    // Find user and return plain object
+    const user = await UserModel.findOne({ email }).lean();
 
-    if (!findUserByEmail) {
-      res.status(401).json({ error: 'Account does not exist' });
-      return;
+    if (!user) {
+      return errorResponse(res, 'Account does not exist', 401);
     }
 
-    if (password !== findUserByEmail.password) {
-      res.status(401).json({ error: 'Email Or Password is incorrect' });
-      return;
+    // Validate password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return errorResponse(res, 'Email or password is incorrect', 401);
     }
 
-    delete findUserByEmail.password;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...userWithoutPassword } = user;
 
-    res.status(200).json(findUserByEmail);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Respond with user data (without password)
+    return successResponse(res, userWithoutPassword, 'Login successful', 200);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    return errorResponse(res, err.message || 'Login failed', 500);
   }
 };

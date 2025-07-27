@@ -5,6 +5,7 @@ import { FriendList } from '../models/FriendList.model';
 import { FriendRequest } from '../models/FriendRequest.model';
 import { FriendRequestStatus, FriendAction } from '../types/enums';
 import { AuthenticatedRequest } from '../types/interface';
+import { errorResponse, successResponse } from '../middlewares/response.middleware';
 
 const updateFriendLists = async (userId1: string, userId2: string) => {
   const [result1, result2] = await Promise.all([
@@ -19,24 +20,21 @@ const updateFriendLists = async (userId1: string, userId2: string) => {
       { upsert: true },
     ),
   ]);
-
   return { result1, result2 };
 };
 
 export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // a
     const fromUser = req.user?.id;
-    // b
     const { toUserId } = req.body;
 
     if (!fromUser || !toUserId) {
-      res.status(400).json({ error: 'Missing required fields' });
+      errorResponse(res, 'Missing required fields');
       return;
     }
 
     if (fromUser === toUserId) {
-      res.status(400).json({ error: "You can't send a request to yourself" });
+      errorResponse(res, "You can't send a request to yourself");
       return;
     }
 
@@ -49,7 +47,7 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
       .lean();
 
     if (existingRequest) {
-      res.status(400).json({ error: 'Friend request already sent' });
+      errorResponse(res, 'Friend request already sent');
       return;
     }
 
@@ -64,9 +62,9 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
       action: FriendAction.SEND_REQUEST,
     });
 
-    res.status(201).json({ message: 'Friend request sent', request: newRequest });
+    successResponse(res, newRequest, 'Friend request sent', 201);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    errorResponse(res, err.message, 500);
   }
 };
 
@@ -74,12 +72,8 @@ export const getFriendRequest = async (req: AuthenticatedRequest, res: Response)
   try {
     const fromUser = req.user?.id;
 
-    // Get all friend requests where the current user is the recipient
-    const friendRequests = await FriendRequest.find({
-      to: fromUser,
-    }).lean();
+    const friendRequests = await FriendRequest.find({ to: fromUser }).lean();
 
-    // Group requests by status for better organization in the response
     const groupedRequests = {
       pending: friendRequests.filter((req) => req.status === FriendRequestStatus.PENDING),
       accepted: friendRequests.filter((req) => req.status === FriendRequestStatus.ACCEPTED),
@@ -87,28 +81,19 @@ export const getFriendRequest = async (req: AuthenticatedRequest, res: Response)
       cancelled: friendRequests.filter((req) => req.status === FriendRequestStatus.CANCELLED),
     };
 
-    res.status(200).json({
-      success: true,
-      data: groupedRequests,
-    });
+    successResponse(res, groupedRequests);
   } catch (err: any) {
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
+    return errorResponse(res, err.message, 500);
   }
 };
 
 export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // to b
     const toUser = req.user?.id;
-    const body = req.body;
-    // to a
-    const fromUserId = body?.fromUserId;
+    const { fromUserId } = req.body;
 
     if (!toUser || !fromUserId) {
-      res.status(400).json({ error: 'Missing required fields' });
+      errorResponse(res, 'Missing required fields');
       return;
     }
 
@@ -129,15 +114,14 @@ export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Respon
     ).lean();
 
     if (!request) {
-      res.status(404).json({ error: 'No pending request found' });
-      return;
+      return errorResponse(res, 'No pending request found', 404);
     }
 
     await updateFriendLists(toUser, fromUserId);
 
-    res.status(200).json({ message: 'Friend request accepted' });
+    successResponse(res, {}, 'Friend request accepted');
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    errorResponse(res, err.message, 500);
   }
 };
 
@@ -147,7 +131,7 @@ export const blockUser = async (req: AuthenticatedRequest, res: Response) => {
     const { targetId, reason } = req.body;
 
     if (!blocker || !targetId) {
-      res.status(400).json({ error: 'Missing required fields' });
+      errorResponse(res, 'Missing required fields');
       return;
     }
 
@@ -167,9 +151,9 @@ export const blockUser = async (req: AuthenticatedRequest, res: Response) => {
       reason,
     });
 
-    res.status(200).json({ message: 'User blocked' });
+    successResponse(res, {}, 'User blocked');
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    errorResponse(res, err.message, 500);
   }
 };
 
@@ -179,7 +163,7 @@ export const unblockUser = async (req: AuthenticatedRequest, res: Response) => {
     const { targetId } = req.body;
 
     if (!unblocker || !targetId) {
-      res.status(400).json({ error: 'Missing required fields' });
+      errorResponse(res, 'Missing required fields');
       return;
     }
 
@@ -194,9 +178,9 @@ export const unblockUser = async (req: AuthenticatedRequest, res: Response) => {
       action: FriendAction.UNBLOCK,
     });
 
-    res.status(200).json({ message: 'User unblocked' });
+    successResponse(res, {}, 'User unblocked');
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    errorResponse(res, err.message, 500);
   }
 };
 
@@ -206,7 +190,7 @@ export const ignoreUser = async (req: AuthenticatedRequest, res: Response) => {
     const { targetId, reason } = req.body;
 
     if (!ignorer || !targetId) {
-      res.status(400).json({ error: 'Missing required fields' });
+      errorResponse(res, 'Missing required fields');
       return;
     }
 
@@ -223,18 +207,17 @@ export const ignoreUser = async (req: AuthenticatedRequest, res: Response) => {
       reason,
     });
 
-    res.status(200).json({ message: 'User ignored' });
+    successResponse(res, {}, 'User ignored');
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    errorResponse(res, err.message, 500);
   }
 };
 
 export const getFriendList = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
-    console.log('userId: ', userId);
     if (!userId) {
-      res.status(400).json({ error: 'User ID is required' });
+      errorResponse(res, 'User ID is required');
       return;
     }
 
@@ -244,14 +227,11 @@ export const getFriendList = async (req: AuthenticatedRequest, res: Response) =>
       .hint('user_1')
       .lean();
 
-    if (!friendList) {
-      res.status(200).json({ friends: [] });
-      return;
-    }
+    const friends = friendList?.friendsList || [];
 
-    res.status(200).json({ friends: friendList.friendsList });
+    successResponse(res, friends);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    errorResponse(res, err.message, 500);
   }
 };
 
@@ -262,7 +242,7 @@ export const getAuditLogs = async (req: AuthenticatedRequest, res: Response) => 
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (!userId) {
-      res.status(400).json({ error: 'User ID is required' });
+      errorResponse(res, 'User ID is required');
       return;
     }
 
@@ -275,8 +255,8 @@ export const getAuditLogs = async (req: AuthenticatedRequest, res: Response) => 
       .populate('actor target', 'name profilePic')
       .lean();
 
-    res.status(200).json({ logs });
+    successResponse(res, { logs });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    errorResponse(res, err.message, 500);
   }
 };

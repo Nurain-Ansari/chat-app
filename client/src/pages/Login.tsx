@@ -20,6 +20,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (loading) return;
+    console.log("{ email, password }: ", { email, password });
 
     setLoading(true);
     setError("");
@@ -35,10 +36,10 @@ const Login = () => {
       console.log("data: ", data);
 
       if (!res.ok) {
-        throw new Error(data.error || "Login failed");
+        throw new Error(data.message || "Login failed");
       }
 
-      localStorage.setItem("userId", data._id);
+      localStorage.setItem("userId", data.data._id);
       navigate("/");
     } catch (err) {
       if (err instanceof Error) {
@@ -101,7 +102,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>

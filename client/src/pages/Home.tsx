@@ -181,7 +181,7 @@ export default function Home() {
           {error}
           <button
             onClick={() => window.location.reload()}
-            className="ml-4 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+            className="ml-4 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm cursor-pointer"
           >
             Retry
           </button>
