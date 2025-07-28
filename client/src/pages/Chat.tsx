@@ -193,7 +193,6 @@ const ChatHeader = ({
   isCurrUserOnline: boolean;
   isTyping: boolean;
 }) => {
-  console.log(currUser);
   return (
     <div className="bg-white shadow-sm p-4 flex items-center justify-between">
       <div className="flex items-center space-x-3">
@@ -446,7 +445,6 @@ export default function Chat() {
 
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [currUser, setCurrUser] = useState<User | null>(null);
-  console.log("currUser: ", currUser);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -584,14 +582,14 @@ export default function Chat() {
 
   // Socket connection setup
   useEffect(() => {
-    console.log("Socket connection status:", socket.connected);
+    // console.log("Socket connection status:", socket.connected);
 
     socket.on("online", (userList: string[]) => {
       setOnlineUsers(userList);
     });
 
     socket.on("connect", () => {
-      console.log("Connected to socket server with ID:", socket.id);
+      // console.log("Connected to socket server with ID:", socket.id);
       if (senderId) socket.emit("online", senderId);
     });
 
@@ -685,13 +683,14 @@ export default function Chat() {
       if (!res.ok) throw new Error("Message send failed");
 
       const savedMessage = await res.json();
+      console.log("savedMessage: ", savedMessage);
       setMessages((prev) => [...prev, { ...savedMessage, status: "sent" }]);
       socket.emit("send-message", savedMessage);
 
       // Update status to delivered when received by server
       socket.emit("message-delivered", {
         messageId: savedMessage._id,
-        receiverId: savedMessage.receiver,
+        senderId: savedMessage.sender,
       });
 
       setText("");

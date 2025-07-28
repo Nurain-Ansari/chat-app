@@ -1,7 +1,6 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
-import { Server } from 'socket.io';
 import express, { Request, Response, NextFunction } from 'express';
 import SwaggerUi from 'swagger-ui-express';
 import cors from 'cors';
@@ -12,6 +11,7 @@ import messageRoutes from './routes/message.route';
 import userRoutes from './routes/user.routes';
 import friendRoutes from './routes/friend.route';
 import { requestLogger } from './middlewares/request-logger.middleware';
+import { setupSocket } from './socket';
 
 dotenv.config();
 
@@ -24,35 +24,10 @@ app.use(express.json());
 app.use(requestLogger);
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: 'http://localhost:5173', // Your frontend URL
-    methods: ['GET', 'POST'],
-  },
-  path: '/api/socket.io',
-});
+setupSocket(server);
 
 app.get('/', (req, res) => {
   res.send('API is running ✅');
-});
-
-const onlineUsers = new Set();
-
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
-
-  socket.on('online', (userId) => {
-    onlineUsers.add(userId);
-    io.emit('online', Array.from(onlineUsers));
-  });
-
-  socket.on('send-message', (messageData) => {
-    socket.broadcast.emit('receive-message', messageData);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-  });
 });
 
 // Routes
