@@ -6,6 +6,7 @@ import { FriendRequest } from '../models/FriendRequest.model';
 import { FriendRequestStatus, FriendAction } from '../types/enums';
 import { AuthenticatedRequest } from '../types/interface';
 import { errorResponse, successResponse } from '../middlewares/response.middleware';
+import { Chat } from '../models/chat.modal';
 
 const updateFriendLists = async (userId1: string, userId2: string) => {
   const [result1, result2] = await Promise.all([
@@ -118,6 +119,20 @@ export const acceptFriendRequest = async (req: AuthenticatedRequest, res: Respon
     }
 
     await updateFriendLists(toUser, fromUserId);
+
+    // ✅ Check if a chat already exists between them
+    let existingChat = await Chat.findOne({
+      isGroup: false,
+      members: { $all: [toUser, fromUserId], $size: 2 },
+    }).lean();
+
+    if (!existingChat) {
+      await Chat.create({
+        isGroup: false,
+        members: [toUser, fromUserId],
+        createdBy: toUser, // or fromUserId
+      });
+    }
 
     successResponse(res, {}, 'Friend request accepted');
   } catch (err: any) {

@@ -66,7 +66,7 @@ export default function Home() {
         window.location.href = "/login";
         return;
       }
-
+      console.log(userId);
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/friend/request`,
         {

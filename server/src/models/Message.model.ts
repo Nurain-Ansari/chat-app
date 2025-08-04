@@ -1,17 +1,46 @@
-import mongoose, { Schema } from 'mongoose';
+import { model, Schema, Types } from 'mongoose';
 
-const messageSchema = new Schema(
+interface IMessage {
+  chat: Types.ObjectId;
+  sender: Types.ObjectId;
+  content: string;
+  messageType?: 'text' | 'image' | 'video' | 'file';
+  status: 'sent' | 'delivered' | 'read';
+  reactions?: {
+    user: Types.ObjectId;
+    emoji: string;
+  }[];
+  seenBy?: Types.ObjectId[];
+}
+
+const messageSchema = new Schema<IMessage>(
   {
+    chat: { type: Schema.Types.ObjectId, ref: 'Chat', required: true },
     sender: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    receiver: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     content: { type: String, required: true },
+    messageType: {
+      type: String,
+      enum: ['text', 'image', 'video', 'file'],
+      default: 'text',
+    },
     status: {
       type: String,
       enum: ['sent', 'delivered', 'read'],
       default: 'sent',
     },
+    reactions: [
+      {
+        user: { type: Schema.Types.ObjectId, ref: 'User' },
+        emoji: String,
+      },
+    ],
+    seenBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true },
 );
 
-export default mongoose.model('Message', messageSchema);
+messageSchema.index({ chat: 1 });
+messageSchema.index({ sender: 1 });
+messageSchema.index({ createdAt: -1 });
+
+export const Message = model<IMessage>('Message', messageSchema);
