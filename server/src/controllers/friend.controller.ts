@@ -71,15 +71,17 @@ export const sendFriendRequest = async (req: AuthenticatedRequest, res: Response
 
 export const getFriendRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const fromUser = req.user?.id;
+    const to = req.user?.id;
 
-    const friendRequests = await FriendRequest.find({ to: fromUser }).lean();
+    const friendRequests = await FriendRequest.find({ to })
+      .populate('from', 'name email profilePic')
+      .lean();
 
     const groupedRequests = {
       pending: friendRequests.filter((req) => req.status === FriendRequestStatus.PENDING),
-      accepted: friendRequests.filter((req) => req.status === FriendRequestStatus.ACCEPTED),
-      rejected: friendRequests.filter((req) => req.status === FriendRequestStatus.REJECTED),
-      cancelled: friendRequests.filter((req) => req.status === FriendRequestStatus.CANCELLED),
+      // accepted: friendRequests.filter((req) => req.status === FriendRequestStatus.ACCEPTED),
+      // rejected: friendRequests.filter((req) => req.status === FriendRequestStatus.REJECTED),
+      // cancelled: friendRequests.filter((req) => req.status === FriendRequestStatus.CANCELLED),
     };
 
     successResponse(res, groupedRequests);
