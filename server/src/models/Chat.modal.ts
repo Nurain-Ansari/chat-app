@@ -23,4 +23,4 @@ const chatSchema = new Schema<IChat>(
 chatSchema.index({ members: 1 }); // For private chat lookup
 chatSchema.index({ isGroup: 1 });
 
-export const Chat = model<IChat>('Chat', chatSchema);
+export const ChatModal = model<IChat>('Chat', chatSchema);

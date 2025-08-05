@@ -1,6 +1,6 @@
 import http from 'http';
 import { Server } from 'socket.io';
-import MessageModel from '../models/Message.model';
+import { MessageModel } from '../models/Message.model';
 
 export function setupSocket(
   server: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>,

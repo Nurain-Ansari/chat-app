@@ -1,20 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
-import { Message } from '../models/Message.model';
-import { Chat } from '../models/chat.modal';
+import { MessageModel } from '../models/Message.model';
+import { ChatModal } from '../models/Chat.modal';
+import { errorResponse, successResponse } from '../middlewares/response.middleware';
 
 // ✅ GET: All messages in a chat
 export const getMessages = async (req: Request, res: Response) => {
   const { chatId } = req.params;
 
   try {
-    const messages = await Message.find({ chat: chatId })
-      .populate('sender', 'name profilePic') // Optional: populate sender info
+    const messages = await MessageModel.find({ chat: chatId })
+      .populate('senderId', 'name profilePic')
       .sort({ createdAt: 1 });
 
-    res.status(200).json(messages);
+    successResponse(res, messages, 'All Message retrieve successfully');
   } catch (err: any) {
-    res.status(500).json({ error: `Failed to fetch messages: ${err.message}` });
+    errorResponse(res, err.messages, 500);
   }
 };
 
@@ -28,7 +29,7 @@ export const sendMessage = async (req: Request, res: Response) => {
       return;
     }
 
-    const message = new Message({
+    const message = new MessageModel({
       chat: chatId,
       sender,
       content,
@@ -38,10 +39,13 @@ export const sendMessage = async (req: Request, res: Response) => {
     const savedMessage = await message.save();
 
     // Update the lastMessage reference in Chat
-    await Chat.findByIdAndUpdate(chatId, { lastMessage: savedMessage._id, updatedAt: new Date() });
+    await ChatModal.findByIdAndUpdate(chatId, {
+      lastMessage: savedMessage._id,
+      updatedAt: new Date(),
+    });
 
-    res.status(201).json(savedMessage);
+    successResponse(res, savedMessage, 'Message sent successfully');
   } catch (err: any) {
-    res.status(500).json({ error: `Failed to send message: ${err.message}` });
+    errorResponse(res, err.messages, 500);
   }
 };

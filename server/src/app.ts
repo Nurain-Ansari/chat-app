@@ -12,6 +12,7 @@ import userRoutes from './routes/user.routes';
 import friendRoutes from './routes/friend.route';
 import { requestLogger } from './middlewares/request-logger.middleware';
 import { setupSocket } from './socket';
+import chatRouter from './routes/chat.route';
 
 dotenv.config();
 
@@ -31,10 +32,11 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.use('/api/messages', messageRoutes);
+app.use('/api/message', messageRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/friend', friendRoutes);
 app.use('/api', authRouter);
+app.use('/api/chat', chatRouter);
 
 const swaggerPath = path.resolve(__dirname, 'swagger', 'swagger.json');
 const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, 'utf8'));

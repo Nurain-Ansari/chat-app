@@ -1,8 +1,8 @@
 import { model, Schema, Types } from 'mongoose';
 
 interface IMessage {
-  chat: Types.ObjectId;
-  sender: Types.ObjectId;
+  chatId: Types.ObjectId;
+  senderId: Types.ObjectId;
   content: string;
   messageType?: 'text' | 'image' | 'video' | 'file';
   status: 'sent' | 'delivered' | 'read';
@@ -15,8 +15,8 @@ interface IMessage {
 
 const messageSchema = new Schema<IMessage>(
   {
-    chat: { type: Schema.Types.ObjectId, ref: 'Chat', required: true },
-    sender: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    chatId: { type: Schema.Types.ObjectId, ref: 'Chat', required: true },
+    senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     content: { type: String, required: true },
     messageType: {
       type: String,
@@ -43,4 +43,4 @@ messageSchema.index({ chat: 1 });
 messageSchema.index({ sender: 1 });
 messageSchema.index({ createdAt: -1 });
 
-export const Message = model<IMessage>('Message', messageSchema);
+export const MessageModel = model<IMessage>('Message', messageSchema);
