@@ -41,6 +41,5 @@ const messageSchema = new Schema<IMessage>(
 
 messageSchema.index({ chat: 1 });
 messageSchema.index({ sender: 1 });
-messageSchema.index({ createdAt: -1 });
 
 export const MessageModel = model<IMessage>('Message', messageSchema);

@@ -23,8 +23,9 @@ export function setupSocket(
       io.emit('online', Array.from(onlineUsers));
     });
 
-    socket.on('send-message', (messageData) => {
-      socket.broadcast.emit('receive-message', messageData);
+    socket.on('sent-message', (messageData) => {
+      console.log('messageData: ', messageData);
+      socket.broadcast.emit('sent-message', messageData);
     });
 
     socket.on('message-delivered', async ({ messageId }) => {

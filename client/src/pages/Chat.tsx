@@ -10,16 +10,31 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
 // Types
-export interface Message {
-  _id?: string;
-  sender: string;
-  receiver: string;
+// export interface Message {
+//   _id?: string;
+//   sender: string;
+//   receiver: string;
+//   content: string;
+//   createdAt?: string;
+//   updatedAt?: string;
+//   timestamp?: string;
+//   __v?: number;
+//   status?: "sent" | "delivered" | "read";
+// }
+
+interface Message {
+  chatId: string;
+  senderId: string;
   content: string;
+  messageType?: "text" | "image" | "video" | "file";
+  status: "sent" | "delivered" | "read";
+  reactions?: {
+    user: string;
+    emoji: string;
+  }[];
+  seenBy?: string[];
   createdAt?: string;
   updatedAt?: string;
-  timestamp?: string;
-  __v?: number;
-  status?: "sent" | "delivered" | "read";
 }
 
 export interface User {
@@ -30,11 +45,40 @@ export interface User {
   __v: number;
 }
 
-interface Friend {
-  user: User;
+// interface Friend {
+//   user: User;
+//   _id: string;
+//   since: string;
+// }
+
+export interface Member {
   _id: string;
-  since: string;
+  name: string;
+  email: string;
+  profilePic: string;
 }
+
+export interface Friend {
+  _id: string;
+  isGroup: boolean;
+  members: Member[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+// interface PendingResponse {
+//   pending: {
+//     _id: string;
+//     // from: Member;
+//     to: string;
+//     status: "pending";
+//     createdAt: string; // ISO date string
+//     updatedAt: string; // ISO date string
+//     __v: number;
+//   }[];
+// }
 
 // Sub-components
 const FriendsList = ({
@@ -44,7 +88,7 @@ const FriendsList = ({
   loading,
   error,
   setSearchParams,
-  senderId,
+  selectedChatId,
   setCurrUser,
 }: {
   friends: Friend[];
@@ -53,11 +97,13 @@ const FriendsList = ({
   loading: boolean;
   error: string;
   setSearchParams: SetURLSearchParams;
-  senderId: string | null;
-  setCurrUser: React.Dispatch<React.SetStateAction<User | null>>;
+  selectedChatId: string | null;
+  setCurrUser: React.Dispatch<React.SetStateAction<Member | null>>;
 }) => {
   const filteredFriends = friends.filter((friend) =>
-    friend.user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    friend.members.find((ele) =>
+      ele.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   return (
@@ -84,103 +130,105 @@ const FriendsList = ({
         </div>
       ) : (
         <div>
-          {filteredFriends.map((friend) => (
-            <div
-              key={friend._id}
-              className={`p-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer ${
-                senderId === friend.user._id ? "bg-blue-50" : ""
-              }`}
-              onClick={() => {
-                setSearchParams({
-                  senderId: senderId || "",
-                  receiverId: friend.user._id,
-                });
-                setCurrUser(friend.user);
-              }}
-            >
-              <div className="relative">
-                <img
-                  src={friend.user.profilePic || "/default-avatar.png"}
-                  alt={friend.user.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-                {onlineUsers.includes(friend.user._id) && (
-                  <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
-                )}
+          {filteredFriends.map((friend) => {
+            const thisChat = friend.members[0];
+            return (
+              <div
+                key={friend._id}
+                className={`p-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer ${
+                  selectedChatId === friend._id ? "bg-blue-50" : ""
+                }`}
+                onClick={() => {
+                  setSearchParams({
+                    chatId: friend._id || "",
+                  });
+                  setCurrUser(thisChat);
+                }}
+              >
+                <div className="relative">
+                  <img
+                    src={thisChat.profilePic || "/default-avatar.png"}
+                    alt={thisChat.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  {onlineUsers.includes(thisChat._id) && (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium truncate">{thisChat.name}</h3>
+                  <p className="text-xs text-gray-500 truncate">
+                    {format(parseISO(friend.createdAt), "MMM d, yyyy")}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate">{friend.user.name}</h3>
-                <p className="text-xs text-gray-500 truncate">
-                  {format(parseISO(friend.since), "MMM d, yyyy")}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>
   );
 };
 
-const RequestsList = ({
-  requests,
-  loading,
-  error,
-}: {
-  requests: Friend[];
-  loading: boolean;
-  error: string;
-}) => {
-  return (
-    <>
-      {loading ? (
-        <div className="p-4 space-y-3">
-          {Array(3)
-            .fill(0)
-            .map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <Skeleton circle width={40} height={40} />
-                <div className="flex-1">
-                  <Skeleton width={120} height={16} />
-                  <Skeleton width={80} height={12} />
-                </div>
-              </div>
-            ))}
-        </div>
-      ) : error ? (
-        <div className="p-4 text-center text-red-500">{error}</div>
-      ) : requests.length === 0 ? (
-        <div className="p-4 text-center text-gray-500">No friend requests</div>
-      ) : (
-        <div>
-          {requests.map((request) => (
-            <div
-              key={request._id}
-              className="p-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer"
-            >
-              <img
-                src={request.user.profilePic || "/default-avatar.png"}
-                alt={request.user.name}
-                className="w-10 h-10 rounded-full object-cover"
-              />
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate">{request.user.name}</h3>
-                <div className="flex gap-2 mt-1">
-                  <button className="text-xs bg-blue-500 text-white px-2 py-1 rounded">
-                    Accept
-                  </button>
-                  <button className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                    Decline
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-};
+// const RequestsList = ({
+//   requests,
+//   loading,
+//   error,
+// }: {
+//   requests: Friend[];
+//   loading: boolean;
+//   error: string;
+// }) => {
+//   return (
+//     <>
+//       {loading ? (
+//         <div className="p-4 space-y-3">
+//           {Array(3)
+//             .fill(0)
+//             .map((_, i) => (
+//               <div key={i} className="flex items-center gap-3">
+//                 <Skeleton circle width={40} height={40} />
+//                 <div className="flex-1">
+//                   <Skeleton width={120} height={16} />
+//                   <Skeleton width={80} height={12} />
+//                 </div>
+//               </div>
+//             ))}
+//         </div>
+//       ) : error ? (
+//         <div className="p-4 text-center text-red-500">{error}</div>
+//       ) : requests.length === 0 ? (
+//         <div className="p-4 text-center text-gray-500">No friend requests</div>
+//       ) : (
+//         <div>
+//           {requests.map((request) => (
+//             <div
+//               key={request._id}
+//               className="p-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer"
+//             >
+//               <img
+//                 src={request.user.profilePic || "/default-avatar.png"}
+//                 alt={request.user.name}
+//                 className="w-10 h-10 rounded-full object-cover"
+//               />
+//               <div className="flex-1 min-w-0">
+//                 <h3 className="font-medium truncate">{request.user.name}</h3>
+//                 <div className="flex gap-2 mt-1">
+//                   <button className="text-xs bg-blue-500 text-white px-2 py-1 rounded">
+//                     Accept
+//                   </button>
+//                   <button className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
+//                     Decline
+//                   </button>
+//                 </div>
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       )}
+//     </>
+//   );
+// };
 
 const ChatHeader = ({
   currUser,
@@ -188,7 +236,7 @@ const ChatHeader = ({
   isCurrUserOnline,
   isTyping,
 }: {
-  currUser: User | null;
+  currUser: Member | null;
   loading: boolean;
   isCurrUserOnline: boolean;
   isTyping: boolean;
@@ -239,16 +287,16 @@ const MessageList = ({
   messages,
   loading,
   error,
-  senderId,
+  selectedChatId,
   messagesEndRef,
 }: {
   messages: Message[];
   loading: boolean;
   error: string;
-  senderId: string | null;
+  selectedChatId: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }) => {
-  const groupedMessages = messages.reduce((acc, message) => {
+  const groupedMessages = messages?.reduce((acc, message) => {
     if (!message.createdAt) return acc;
 
     const msgDate = parseISO(message.createdAt);
@@ -256,24 +304,24 @@ const MessageList = ({
 
     if (
       lastGroup &&
-      lastGroup.sender === message.sender &&
-      isSameDay(parseISO(lastGroup.messages[0].createdAt || ""), msgDate) &&
+      lastGroup.senderId === message.senderId &&
+      !!lastGroup.messages[0].createdAt &&
+      isSameDay(parseISO(lastGroup.messages[0].createdAt!), msgDate) &&
       Math.abs(
-        new Date(lastGroup.messages[0].createdAt || "").getTime() -
-          msgDate.getTime()
+        new Date(lastGroup.messages[0].createdAt!).getTime() - msgDate.getTime()
       ) < 600000
     ) {
       lastGroup.messages.push(message);
     } else {
       acc.push({
-        sender: message.sender,
+        senderId: message.senderId,
         date: msgDate,
         messages: [message],
       });
     }
 
     return acc;
-  }, [] as { sender: string; date: Date; messages: Message[] }[]);
+  }, [] as { senderId: string; date: Date; messages: Message[] }[]);
 
   const formatDateHeader = (date: Date) => {
     if (isToday(date)) return "Today";
@@ -281,9 +329,7 @@ const MessageList = ({
     return format(date, "MMMM d, yyyy");
   };
 
-  const getMessageTime = (date: Date) => {
-    return format(date, "h:mm a");
-  };
+  const getMessageTime = (date: Date) => format(date, "h:mm a");
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
@@ -316,14 +362,12 @@ const MessageList = ({
         </div>
       ) : (
         groupedMessages.map((group, groupIndex) => {
-          const isCurrentUser = group.sender === senderId;
+          const isCurrentUser = group.senderId === selectedChatId;
           const groupDate = group.date;
           const showDateHeader =
             groupIndex === 0 ||
             !isSameDay(
-              parseISO(
-                groupedMessages[groupIndex - 1].messages[0].createdAt || ""
-              ),
+              parseISO(groupedMessages[groupIndex - 1].messages[0].createdAt!),
               groupDate
             );
 
@@ -349,21 +393,27 @@ const MessageList = ({
                 >
                   {group.messages.map((message, msgIndex) => (
                     <div
-                      key={message._id || msgIndex}
+                      key={msgIndex}
                       className={`p-3 rounded-lg ${
                         isCurrentUser
                           ? "bg-blue-500 text-white rounded-br-none"
                           : "bg-gray-200 text-gray-800 rounded-bl-none"
                       }`}
                     >
-                      <div className="break-words">{message.content}</div>
+                      <div className="break-words">
+                        {/* Extend this for images/files/videos */}
+                        {message.content}
+                      </div>
+
                       <div className="flex items-center justify-end gap-1 mt-1">
                         <span
                           className={`text-xs ${
                             isCurrentUser ? "text-blue-100" : "text-gray-500"
                           }`}
                         >
-                          {getMessageTime(parseISO(message.createdAt || ""))}
+                          {message.createdAt
+                            ? getMessageTime(parseISO(message.createdAt))
+                            : ""}
                         </span>
                         {isCurrentUser && (
                           <span className="text-xs">
@@ -439,12 +489,10 @@ const MessageInput = ({
 // Main Chat Component
 export default function Chat() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const receiverId = searchParams.get("receiverId");
-  const senderId =
-    searchParams.get("senderId") || localStorage.getItem("userId");
+  const selectedChatId = searchParams.get("chatId") || "";
 
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-  const [currUser, setCurrUser] = useState<User | null>(null);
+  const [currUser, setCurrUser] = useState<Member | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -477,16 +525,13 @@ export default function Chat() {
   useEffect(() => {
     const fetchFriends = async () => {
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/friend/friends`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${id}`,
-            },
-          }
-        );
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/mine`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${id}`,
+          },
+        });
         const data = await res.json();
         if (data.success) {
           setFriends(data.data);
@@ -514,12 +559,10 @@ export default function Chat() {
 
   // Fetch old messages
   useEffect(() => {
-    if (!senderId || !receiverId) return;
-
     const fetchMessages = async () => {
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/messages/${senderId}/${receiverId}`,
+          `${import.meta.env.VITE_API_URL}/message/${selectedChatId}`,
           {
             method: "GET",
             headers: {
@@ -528,9 +571,9 @@ export default function Chat() {
             },
           }
         );
-        const data: Message[] = await res.json();
-        setMessages(data);
-        if (senderId) socket.emit("online", senderId);
+        const data = await res.json();
+        setMessages(data.data);
+        // if (senderId) socket.emit("online", senderId);
       } catch {
         setError((prev) => ({
           ...prev,
@@ -540,45 +583,20 @@ export default function Chat() {
         setLoading((prev) => ({ ...prev, messages: false }));
       }
     };
-
-    setLoading((prev) => ({ ...prev, messages: true }));
-    fetchMessages();
-  }, [receiverId, senderId, id]);
+    if (selectedChatId) {
+      setLoading((prev) => ({ ...prev, messages: true }));
+      fetchMessages();
+    }
+  }, [selectedChatId, id]);
 
   // Fetch user info
   useEffect(() => {
-    // const fetchUser = async () => {
-    //   try {
-    //     if (!receiverId) return;
-
-    //     const res = await fetch(
-    //       `${import.meta.env.VITE_API_URL}/user/${receiverId}`,
-    //       {
-    //         method: "GET",
-    //         headers: {
-    //           "Content-Type": "application/json",
-    //           Authorization: `Bearer ${id}`,
-    //         },
-    //       }
-    //     );
-    //     const data = await res.json();
-    //     setCurrUser(data);
-    //   } catch {
-    //     setError((prev) => ({
-    //       ...prev,
-    //       user: "Failed to load user info",
-    //     }));
-    //   } finally {
-    //     setLoading((prev) => ({ ...prev, user: false }));
-    //   }
-    // };
-    // setLoading((prev) => ({ ...prev, user: true }));
-
-    const selectedFr = friends.find((ele) => ele.user._id === receiverId)?.user;
-
-    setCurrUser(selectedFr || null);
-    // fetchUser();
-  }, [setCurrUser, friends, receiverId]);
+    const selectedFr = friends.find((ele) => ele._id === selectedChatId)
+      ?.members[0];
+    if (selectedFr) {
+      setCurrUser(selectedFr);
+    }
+  }, [setCurrUser, friends, selectedChatId]);
 
   // Socket connection setup
   useEffect(() => {
@@ -590,7 +608,7 @@ export default function Chat() {
 
     socket.on("connect", () => {
       // console.log("Connected to socket server with ID:", socket.id);
-      if (senderId) socket.emit("online", senderId);
+      if (id) socket.emit("online", id);
     });
 
     socket.on("disconnect", () => {
@@ -601,51 +619,52 @@ export default function Chat() {
       console.error("Connection error:", err);
     });
 
-    socket.on("receive-message", (data: Message) => {
-      if (
-        (data.sender === receiverId && data.receiver === senderId) ||
-        (data.sender === senderId && data.receiver === receiverId)
-      ) {
-        setMessages((prev) => [...prev, data]);
+    socket.on("sent-message", (data: Message) => {
+      console.log("data: ", data);
+      // if (
+      //   (data.sender === receiverId && data.receiver === senderId) ||
+      //   (data.sender === senderId && data.receiver === receiverId)
+      // ) {
+      //   setMessages((prev) => [...prev, data]);
 
-        // Update message status to delivered
-        if (data.sender === receiverId && data.receiver === senderId) {
-          socket.emit("message-read", {
-            messageId: data._id,
-            receiverId: senderId,
-          });
-        }
-      }
+      //   // Update message status to delivered
+      //   if (data.sender === receiverId && data.receiver === senderId) {
+      //     socket.emit("message-read", {
+      //       messageId: data._id,
+      //       receiverId: senderId,
+      //     });
+      //   }
+      // }
     });
 
     // Typing indicator handler
-    socket.on("typing", (userId) => {
-      if (userId === receiverId) {
-        setIsTyping(true);
-        const timer = setTimeout(() => setIsTyping(false), 2000);
-        return () => clearTimeout(timer);
-      }
-    });
+    // socket.on("typing", (userId) => {
+    //   if (userId === receiverId) {
+    //     setIsTyping(true);
+    //     const timer = setTimeout(() => setIsTyping(false), 2000);
+    //     return () => clearTimeout(timer);
+    //   }
+    // });
 
     // Message status updates
-    socket.on("message-delivered", (messageId) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === messageId ? { ...msg, status: "delivered" } : msg
-        )
-      );
-    });
+    // socket.on("message-delivered", (messageId) => {
+    //   setMessages((prev) =>
+    //     prev.map((msg) =>
+    //       msg._id === messageId ? { ...msg, status: "delivered" } : msg
+    //     )
+    //   );
+    // });
 
-    socket.on("message-read", (messageId) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === messageId ? { ...msg, status: "read" } : msg
-        )
-      );
-    });
+    // socket.on("message-read", (messageId) => {
+    //   setMessages((prev) =>
+    //     prev.map((msg) =>
+    //       msg._id === messageId ? { ...msg, status: "read" } : msg
+    //     )
+    //   );
+    // });
 
     return () => {
-      socket.off("receive-message");
+      socket.off("sent-message");
       socket.off("typing");
       socket.off("online");
       socket.off("connect");
@@ -654,24 +673,25 @@ export default function Chat() {
       socket.off("message-delivered");
       socket.off("message-read");
     };
-  }, [receiverId, senderId]);
+  }, [id]);
 
   const handleTyping = () => {
-    if (senderId) socket.emit("typing", senderId);
+    // if (senderId) socket.emit("typing", senderId);
   };
 
   const sendMessage = async () => {
-    if (!text.trim() || !senderId || !receiverId) return;
+    if (!selectedChatId || !id || !text) return;
 
     const msg: Message = {
-      sender: senderId,
-      receiver: receiverId,
+      chatId: selectedChatId,
+      senderId: id,
       content: text,
       status: "sent",
+      messageType: "text",
     };
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/messages`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -683,14 +703,13 @@ export default function Chat() {
       if (!res.ok) throw new Error("Message send failed");
 
       const savedMessage = await res.json();
-      console.log("savedMessage: ", savedMessage);
       setMessages((prev) => [...prev, { ...savedMessage, status: "sent" }]);
-      socket.emit("send-message", savedMessage);
+      socket.emit("sent-message", savedMessage.data);
 
       // Update status to delivered when received by server
       socket.emit("message-delivered", {
-        messageId: savedMessage._id,
-        senderId: savedMessage.sender,
+        messageId: savedMessage.data._id,
+        senderId: savedMessage.data.senderId,
       });
 
       setText("");
@@ -706,7 +725,7 @@ export default function Chat() {
     }
   };
 
-  const isCurrUserOnline = !!receiverId && onlineUsers.includes(receiverId);
+  const isCurrUserOnline = !!currUser && onlineUsers.includes(currUser._id);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -762,22 +781,23 @@ export default function Chat() {
               loading={loading.friends}
               error={error.friends}
               setSearchParams={setSearchParams}
-              senderId={senderId}
+              selectedChatId={selectedChatId}
               setCurrUser={setCurrUser}
             />
           ) : (
-            <RequestsList
-              requests={requests}
-              loading={loading.requests}
-              error={error.requests}
-            />
+            <></>
+            // <RequestsList
+            //   requests={requests}
+            //   loading={loading.requests}
+            //   error={error.requests}
+            // />
           )}
         </div>
       </div>
 
       {/* Right panel - Chat area */}
       <div className="flex-1 flex flex-col">
-        {receiverId ? (
+        {selectedChatId ? (
           <>
             <ChatHeader
               currUser={currUser}
@@ -790,7 +810,7 @@ export default function Chat() {
               messages={messages}
               loading={loading.messages}
               error={error.messages}
-              senderId={senderId}
+              selectedChatId={selectedChatId}
               messagesEndRef={messagesEndRef}
             />
 
