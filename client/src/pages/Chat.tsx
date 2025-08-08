@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams, type SetURLSearchParams } from "react-router-dom";
 import socket from "../socket";
 import { format, isToday, isYesterday, parseISO, isSameDay } from "date-fns";
@@ -24,7 +24,11 @@ import "react-loading-skeleton/dist/skeleton.css";
 
 interface Message {
   chatId: string;
-  senderId: string;
+  senderId: {
+    _id: string;
+    name: string;
+    profilePic: string;
+  };
   content: string;
   messageType?: "text" | "image" | "video" | "file";
   status: "sent" | "delivered" | "read";
@@ -89,7 +93,7 @@ const FriendsList = ({
   error,
   setSearchParams,
   selectedChatId,
-  setCurrUser,
+  setSelectedUser,
 }: {
   friends: Friend[];
   onlineUsers: string[];
@@ -98,7 +102,7 @@ const FriendsList = ({
   error: string;
   setSearchParams: SetURLSearchParams;
   selectedChatId: string | null;
-  setCurrUser: React.Dispatch<React.SetStateAction<Member | null>>;
+  setSelectedUser: React.Dispatch<React.SetStateAction<Member | null>>;
 }) => {
   const filteredFriends = friends.filter((friend) =>
     friend.members.find((ele) =>
@@ -142,7 +146,7 @@ const FriendsList = ({
                   setSearchParams({
                     chatId: friend._id || "",
                   });
-                  setCurrUser(thisChat);
+                  setSelectedUser(thisChat);
                 }}
               >
                 <div className="relative">
@@ -231,14 +235,14 @@ const FriendsList = ({
 // };
 
 const ChatHeader = ({
-  currUser,
+  selectedUser,
   loading,
-  isCurrUserOnline,
+  isselectedUserOnline,
   isTyping,
 }: {
-  currUser: Member | null;
+  selectedUser: Member | null;
   loading: boolean;
-  isCurrUserOnline: boolean;
+  isselectedUserOnline: boolean;
   isTyping: boolean;
 }) => {
   return (
@@ -250,13 +254,13 @@ const ChatHeader = ({
           ) : (
             <>
               <img
-                src={currUser?.profilePic || "/default-avatar.png"}
-                alt={currUser?.name}
+                src={selectedUser?.profilePic || "/default-avatar.png"}
+                alt={selectedUser?.name}
                 className="w-10 h-10 rounded-full object-cover"
               />
               <span
                 className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-                  isCurrUserOnline ? "bg-green-500" : "bg-gray-400"
+                  isselectedUserOnline ? "bg-green-500" : "bg-gray-400"
                 }`}
               ></span>
             </>
@@ -270,10 +274,10 @@ const ChatHeader = ({
             </div>
           ) : (
             <>
-              <h2 className="font-semibold text-lg">{currUser?.name}</h2>
+              <h2 className="font-semibold text-lg">{selectedUser?.name}</h2>
               <p className="text-xs text-gray-500">
-                {isCurrUserOnline ? "Online" : "Offline"}
-                {isTyping && isCurrUserOnline && " • typing..."}
+                {isselectedUserOnline ? "Online" : "Offline"}
+                {isTyping && isselectedUserOnline && " • typing..."}
               </p>
             </>
           )}
@@ -287,41 +291,52 @@ const MessageList = ({
   messages,
   loading,
   error,
-  selectedChatId,
+  currUserId,
   messagesEndRef,
 }: {
   messages: Message[];
   loading: boolean;
   error: string;
-  selectedChatId: string | null;
+  currUserId: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }) => {
-  const groupedMessages = messages?.reduce((acc, message) => {
-    if (!message.createdAt) return acc;
+  const groupedMessages = useMemo(() => {
+    if (!messages) return [];
 
-    const msgDate = parseISO(message.createdAt);
-    const lastGroup = acc[acc.length - 1];
+    return messages.reduce((acc, message) => {
+      if (!message.createdAt) return acc;
 
-    if (
-      lastGroup &&
-      lastGroup.senderId === message.senderId &&
-      !!lastGroup.messages[0].createdAt &&
-      isSameDay(parseISO(lastGroup.messages[0].createdAt!), msgDate) &&
-      Math.abs(
-        new Date(lastGroup.messages[0].createdAt!).getTime() - msgDate.getTime()
-      ) < 600000
-    ) {
-      lastGroup.messages.push(message);
-    } else {
-      acc.push({
-        senderId: message.senderId,
-        date: msgDate,
-        messages: [message],
-      });
-    }
+      let msgDate: Date;
+      try {
+        msgDate = parseISO(message.createdAt);
+      } catch {
+        return acc;
+      }
 
-    return acc;
-  }, [] as { senderId: string; date: Date; messages: Message[] }[]);
+      const lastGroup = acc[acc.length - 1];
+      if (
+        lastGroup &&
+        lastGroup.senderId._id === message.senderId._id &&
+        isSameDay(lastGroup.date, msgDate) &&
+        Math.abs(
+          msgDate.getTime() -
+            parseISO(
+              lastGroup.messages[lastGroup.messages.length - 1].createdAt!
+            ).getTime()
+        ) < 600000 // 10 mins
+      ) {
+        lastGroup.messages.push(message);
+      } else {
+        acc.push({
+          senderId: message.senderId,
+          date: msgDate,
+          messages: [message],
+        });
+      }
+
+      return acc;
+    }, [] as { senderId: Message["senderId"]; date: Date; messages: Message[] }[]);
+  }, [messages]);
 
   const formatDateHeader = (date: Date) => {
     if (isToday(date)) return "Today";
@@ -335,24 +350,22 @@ const MessageList = ({
     <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
       {loading ? (
         <div className="space-y-4">
-          {Array(5)
-            .fill(0)
-            .map((_, i) => (
-              <div
-                key={i}
-                className={`flex ${
-                  i % 2 === 0 ? "justify-end" : "justify-start"
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className={`flex ${
+                i % 2 === 0 ? "justify-end" : "justify-start"
+              }`}
+            >
+              <Skeleton
+                width={Math.floor(Math.random() * 200) + 100}
+                height={40}
+                className={`rounded-lg ${
+                  i % 2 === 0 ? "rounded-br-none" : "rounded-bl-none"
                 }`}
-              >
-                <Skeleton
-                  width={Math.floor(Math.random() * 200) + 100}
-                  height={40}
-                  className={`rounded-lg ${
-                    i % 2 === 0 ? "rounded-br-none" : "rounded-bl-none"
-                  }`}
-                />
-              </div>
-            ))}
+              />
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="text-center text-red-500 py-4">{error}</div>
@@ -362,13 +375,12 @@ const MessageList = ({
         </div>
       ) : (
         groupedMessages.map((group, groupIndex) => {
-          const isCurrentUser = group.senderId === selectedChatId;
-          const groupDate = group.date;
+          const isCurrentUser = group.senderId._id === currUserId;
           const showDateHeader =
             groupIndex === 0 ||
             !isSameDay(
               parseISO(groupedMessages[groupIndex - 1].messages[0].createdAt!),
-              groupDate
+              group.date
             );
 
           return (
@@ -376,7 +388,7 @@ const MessageList = ({
               {showDateHeader && (
                 <div className="flex justify-center my-4">
                   <span className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
-                    {formatDateHeader(groupDate)}
+                    {formatDateHeader(group.date)}
                   </span>
                 </div>
               )}
@@ -392,41 +404,60 @@ const MessageList = ({
                   }`}
                 >
                   {group.messages.map((message, msgIndex) => (
-                    <div
-                      key={msgIndex}
-                      className={`p-3 rounded-lg ${
-                        isCurrentUser
-                          ? "bg-blue-500 text-white rounded-br-none"
-                          : "bg-gray-200 text-gray-800 rounded-bl-none"
-                      }`}
-                    >
-                      <div className="break-words">
-                        {/* Extend this for images/files/videos */}
-                        {message.content}
+                    <div key={msgIndex} className="space-y-1">
+                      {/* Bubble */}
+                      <div
+                        className={`p-3 rounded-lg ${
+                          isCurrentUser
+                            ? "bg-blue-500 text-white rounded-br-none"
+                            : "bg-gray-200 text-gray-800 rounded-bl-none"
+                        }`}
+                      >
+                        <div className="break-words">{message.content}</div>
+                        <div className="flex items-center justify-end gap-1 mt-1">
+                          <span
+                            className={`text-xs ${
+                              isCurrentUser ? "text-blue-100" : "text-gray-500"
+                            }`}
+                          >
+                            {message.createdAt
+                              ? getMessageTime(parseISO(message.createdAt))
+                              : ""}
+                          </span>
+                          {isCurrentUser && (
+                            <span className="text-xs">
+                              {message.status === "read" ? (
+                                <BsCheck2All className="text-blue-100" />
+                              ) : message.status === "delivered" ? (
+                                <BsCheck2All className="text-gray-300" />
+                              ) : (
+                                <BsCheck2 className="text-gray-300" />
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-end gap-1 mt-1">
-                        <span
-                          className={`text-xs ${
-                            isCurrentUser ? "text-blue-100" : "text-gray-500"
+                      {/* Reactions */}
+                      {message.reactions?.length ? (
+                        <div
+                          className={`flex gap-1 mt-1 text-sm ${
+                            isCurrentUser ? "justify-end" : "justify-start"
                           }`}
                         >
-                          {message.createdAt
-                            ? getMessageTime(parseISO(message.createdAt))
-                            : ""}
-                        </span>
-                        {isCurrentUser && (
-                          <span className="text-xs">
-                            {message.status === "read" ? (
-                              <BsCheck2All className="text-blue-100" />
-                            ) : message.status === "delivered" ? (
-                              <BsCheck2All className="text-gray-300" />
-                            ) : (
-                              <BsCheck2 className="text-gray-300" />
-                            )}
-                          </span>
-                        )}
-                      </div>
+                          {message.reactions.map((reaction, i) => (
+                            <span
+                              key={i}
+                              className="bg-white shadow px-2 py-1 rounded-full flex items-center gap-1"
+                            >
+                              <span>{reaction.emoji}</span>
+                              <span className="text-xs text-gray-500">
+                                {reaction.user}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -490,9 +521,10 @@ const MessageInput = ({
 export default function Chat() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedChatId = searchParams.get("chatId") || "";
+  const currUserId = localStorage.getItem("userId");
 
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-  const [currUser, setCurrUser] = useState<Member | null>(null);
+  const [selectedUser, setSelectedUser] = useState<Member | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -500,7 +532,6 @@ export default function Chat() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [requests] = useState<Friend[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const id = localStorage.getItem("userId");
   const [loading, setLoading] = useState({
     friends: true,
     messages: true,
@@ -529,7 +560,7 @@ export default function Chat() {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${id}`,
+            Authorization: `Bearer ${currUserId}`,
           },
         });
         const data = await res.json();
@@ -550,7 +581,7 @@ export default function Chat() {
     };
 
     fetchFriends();
-  }, [id]);
+  }, [currUserId]);
 
   // Fetch friend requests (empty for now)
   useEffect(() => {
@@ -567,7 +598,7 @@ export default function Chat() {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${id}`,
+              Authorization: `Bearer ${currUserId}`,
             },
           }
         );
@@ -587,16 +618,16 @@ export default function Chat() {
       setLoading((prev) => ({ ...prev, messages: true }));
       fetchMessages();
     }
-  }, [selectedChatId, id]);
+  }, [selectedChatId, currUserId]);
 
   // Fetch user info
   useEffect(() => {
     const selectedFr = friends.find((ele) => ele._id === selectedChatId)
       ?.members[0];
     if (selectedFr) {
-      setCurrUser(selectedFr);
+      setSelectedUser(selectedFr);
     }
-  }, [setCurrUser, friends, selectedChatId]);
+  }, [setSelectedUser, friends, selectedChatId]);
 
   // Socket connection setup
   useEffect(() => {
@@ -608,7 +639,7 @@ export default function Chat() {
 
     socket.on("connect", () => {
       // console.log("Connected to socket server with ID:", socket.id);
-      if (id) socket.emit("online", id);
+      if (currUserId) socket.emit("online", currUserId);
     });
 
     socket.on("disconnect", () => {
@@ -673,18 +704,18 @@ export default function Chat() {
       socket.off("message-delivered");
       socket.off("message-read");
     };
-  }, [id]);
+  }, [currUserId]);
 
   const handleTyping = () => {
     // if (senderId) socket.emit("typing", senderId);
   };
 
   const sendMessage = async () => {
-    if (!selectedChatId || !id || !text) return;
+    if (!selectedChatId || !currUserId || !text) return;
 
-    const msg: Message = {
+    const msg = {
       chatId: selectedChatId,
-      senderId: id,
+      senderId: currUserId,
       content: text,
       status: "sent",
       messageType: "text",
@@ -695,7 +726,7 @@ export default function Chat() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${id}`,
+          Authorization: `Bearer ${currUserId}`,
         },
         body: JSON.stringify(msg),
       });
@@ -725,7 +756,8 @@ export default function Chat() {
     }
   };
 
-  const isCurrUserOnline = !!currUser && onlineUsers.includes(currUser._id);
+  const isselectedUserOnline =
+    !!selectedUser && onlineUsers.includes(selectedUser._id);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -782,7 +814,7 @@ export default function Chat() {
               error={error.friends}
               setSearchParams={setSearchParams}
               selectedChatId={selectedChatId}
-              setCurrUser={setCurrUser}
+              setSelectedUser={setSelectedUser}
             />
           ) : (
             <></>
@@ -800,9 +832,9 @@ export default function Chat() {
         {selectedChatId ? (
           <>
             <ChatHeader
-              currUser={currUser}
+              selectedUser={selectedUser}
               loading={loading.user}
-              isCurrUserOnline={isCurrUserOnline}
+              isselectedUserOnline={isselectedUserOnline}
               isTyping={isTyping}
             />
 
@@ -810,7 +842,7 @@ export default function Chat() {
               messages={messages}
               loading={loading.messages}
               error={error.messages}
-              selectedChatId={selectedChatId}
+              currUserId={currUserId}
               messagesEndRef={messagesEndRef}
             />
 
