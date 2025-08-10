@@ -1,7 +1,6 @@
 import { Request } from 'express';
+import { UserTypeFromSchema } from '../models/User.model';
 
 export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-  };
+  user?: UserTypeFromSchema & { id: string };
 }

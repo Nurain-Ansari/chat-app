@@ -46,7 +46,7 @@ export const verifyUser = async (req: AuthenticatedRequest, res: Response, next:
       return;
     }
 
-    req.user = { id };
+    req.user = { ...user, id };
 
     next();
   } catch {

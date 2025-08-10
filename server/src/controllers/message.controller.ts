@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { MessageModel } from '../models/Message.model';
 import { ChatModal } from '../models/Chat.modal';
 import { errorResponse, successResponse } from '../middlewares/response.middleware';
+import { AuthenticatedRequest } from '../types/interface';
 
 // ✅ GET: All messages in a chat
 export const getMessages = async (req: Request, res: Response) => {
@@ -20,7 +21,7 @@ export const getMessages = async (req: Request, res: Response) => {
 };
 
 // ✅ POST: Send a new message in a chat
-export const sendMessage = async (req: Request, res: Response) => {
+export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
   const { chatId, senderId, content, messageType = 'text' } = req.body;
 
   try {
@@ -39,7 +40,19 @@ export const sendMessage = async (req: Request, res: Response) => {
       updatedAt: new Date(),
     });
 
-    successResponse(res, savedMessage, 'Message sent successfully');
+    // ✅ Convert to plain object before spreading
+    const messageObj = savedMessage.toObject();
+
+    const finalData = {
+      ...messageObj,
+      senderId: {
+        name: req.user?.name,
+        profilePic: req.user?.profilePic,
+        _id: req.user?.id,
+      },
+    };
+
+    successResponse(res, finalData, 'Message sent successfully');
   } catch (err: unknown) {
     errorResponse(req, res, err);
   }

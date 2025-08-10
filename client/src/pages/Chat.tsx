@@ -39,6 +39,7 @@ interface Message {
   seenBy?: string[];
   createdAt?: string;
   updatedAt?: string;
+  _id: string;
 }
 
 export interface User {
@@ -651,21 +652,21 @@ export default function Chat() {
     });
 
     socket.on("sent-message", (data: Message) => {
-      console.log("data: ", data);
-      // if (
-      //   (data.sender === receiverId && data.receiver === senderId) ||
-      //   (data.sender === senderId && data.receiver === receiverId)
-      // ) {
-      //   setMessages((prev) => [...prev, data]);
+      if (data.chatId === selectedChatId) {
+        setMessages((prev) => [...prev, data]);
 
-      //   // Update message status to delivered
-      //   if (data.sender === receiverId && data.receiver === senderId) {
-      //     socket.emit("message-read", {
-      //       messageId: data._id,
-      //       receiverId: senderId,
-      //     });
-      //   }
-      // }
+        socket.emit("message-delivered", {
+          messageId: data._id,
+        });
+
+        // when user will see in really avaible window when auto scroll is off
+        // if () {
+        // socket.emit("message-read", {
+        //   messageId: data._id,
+        //   chatId: selectedChatId,
+        // });
+        // }
+      }
     });
 
     // Typing indicator handler
@@ -678,13 +679,14 @@ export default function Chat() {
     // });
 
     // Message status updates
-    // socket.on("message-delivered", (messageId) => {
-    //   setMessages((prev) =>
-    //     prev.map((msg) =>
-    //       msg._id === messageId ? { ...msg, status: "delivered" } : msg
-    //     )
-    //   );
-    // });
+    socket.on("message-delivered", (messageId) => {
+      console.log("messageId: ", messageId);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === messageId ? { ...msg, status: "delivered" } : msg
+        )
+      );
+    });
 
     // socket.on("message-read", (messageId) => {
     //   setMessages((prev) =>
@@ -734,14 +736,14 @@ export default function Chat() {
       if (!res.ok) throw new Error("Message send failed");
 
       const savedMessage = await res.json();
-      setMessages((prev) => [...prev, { ...savedMessage, status: "sent" }]);
+      setMessages((prev) => [...prev, { ...savedMessage.data }]);
       socket.emit("sent-message", savedMessage.data);
 
       // Update status to delivered when received by server
-      socket.emit("message-delivered", {
-        messageId: savedMessage.data._id,
-        senderId: savedMessage.data.senderId,
-      });
+      // socket.emit("message-delivered", {
+      //   messageId: savedMessage.data._id,
+      //   senderId: savedMessage.data.senderId,
+      // });
 
       setText("");
     } catch (err) {
@@ -769,6 +771,7 @@ export default function Chat() {
             <input
               type="text"
               placeholder="Search..."
+              autoFocus
               className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

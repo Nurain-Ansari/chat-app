@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { InferSchemaType } from 'mongoose';
 import { UserType } from '../types/enums';
 
 const userSchema = new mongoose.Schema(
@@ -17,5 +17,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ email: 1 }, { unique: true });
+
+export type UserTypeFromSchema = InferSchemaType<typeof userSchema>;
 
 export default mongoose.model('User', userSchema);
