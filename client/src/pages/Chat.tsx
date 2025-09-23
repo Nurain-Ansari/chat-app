@@ -8,6 +8,7 @@ import { BsCheck2All, BsCheck2 } from "react-icons/bs";
 import { RiUserReceivedLine } from "react-icons/ri";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import useDebounce from "../hooks/useDebounce";
 
 // Types
 // export interface Message {
@@ -137,6 +138,7 @@ const FriendsList = ({
         <div>
           {filteredFriends.map((friend) => {
             const thisChat = friend.members[0];
+            // console.log(thisChat);
             return (
               <div
                 key={friend._id}
@@ -485,6 +487,14 @@ const MessageInput = ({
   handleTyping: () => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
 }) => {
+  // const debouncedText = useDebounce(text, 500);
+
+  // // Only trigger typing indicator after debounce
+  // useEffect(() => {
+  //   if (debouncedText.trim()) {
+  //     handleTyping();
+  //   }
+  // }, [debouncedText, handleTyping]);
   return (
     <div className="bg-white border-t p-4">
       <form
@@ -632,16 +642,17 @@ export default function Chat() {
 
   // Socket connection setup
   useEffect(() => {
-    // console.log("Socket connection status:", socket.connected);
-
     socket.on("online", (userList: string[]) => {
       setOnlineUsers(userList);
     });
 
     socket.on("connect", () => {
-      // console.log("Connected to socket server with ID:", socket.id);
       if (currUserId) socket.emit("online", currUserId);
     });
+
+    if (selectedChatId) {
+      socket.emit("join-chat", selectedChatId);
+    }
 
     socket.on("disconnect", () => {
       console.log("Disconnected from socket server");
@@ -670,17 +681,16 @@ export default function Chat() {
     });
 
     // Typing indicator handler
-    // socket.on("typing", (userId) => {
-    //   if (userId === receiverId) {
-    //     setIsTyping(true);
-    //     const timer = setTimeout(() => setIsTyping(false), 2000);
-    //     return () => clearTimeout(timer);
-    //   }
-    // });
+    socket.on("typing", ({ chatId }) => {
+      if (chatId === selectedChatId) {
+        setIsTyping(true);
+        const timer = setTimeout(() => setIsTyping(false), 1000);
+        return () => clearTimeout(timer);
+      }
+    });
 
     // Message status updates
     socket.on("message-delivered", (messageId) => {
-      console.log("messageId: ", messageId);
       setMessages((prev) =>
         prev.map((msg) =>
           msg._id === messageId ? { ...msg, status: "delivered" } : msg
@@ -706,10 +716,12 @@ export default function Chat() {
       socket.off("message-delivered");
       socket.off("message-read");
     };
-  }, [currUserId]);
+  }, [currUserId, selectedChatId]);
 
   const handleTyping = () => {
-    // if (senderId) socket.emit("typing", senderId);
+    if (selectedChatId && currUserId) {
+      socket.emit("typing", { chatId: selectedChatId, userId: currUserId });
+    }
   };
 
   const sendMessage = async () => {

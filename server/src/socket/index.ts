@@ -23,12 +23,16 @@ export function setupSocket(
       io.emit('online', Array.from(onlineUsers));
     });
 
+    // Join a chat room
+    socket.on('join-chat', (chatId: string) => {
+      socket.join(chatId);
+    });
+
     socket.on('sent-message', (messageData) => {
       socket.broadcast.emit('sent-message', messageData);
     });
 
     socket.on('message-delivered', async ({ messageId }) => {
-      console.log('messageId: ', messageId);
       await MessageModel.findByIdAndUpdate(messageId, {
         status: 'delivered',
       });
@@ -42,5 +46,14 @@ export function setupSocket(
     socket.on('disconnect', () => {
       console.log('User disconnected');
     });
+
+    // Typing indicator
+    socket.on('typing', ({ chatId, userId }) => {
+      socket.to(chatId).emit('typing', { userId, chatId });
+    });
+
+    // socket.on('stop-typing', ({ chatId, userId }) => {
+    //   socket.to(chatId).emit('user-stop-typing', { userId, chatId });
+    // });
   });
 }
