@@ -15,7 +15,7 @@ export default function MessageList({
   loading: boolean;
   error: string;
   currUserId: string | null;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const groupedMessages = useMemo(() => {
     if (!messages) return [];
